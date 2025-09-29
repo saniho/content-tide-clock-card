@@ -1,0 +1,6 @@
+{
+  "name": "Tide Clock Card",
+  "content_in_root": true,
+  "filename": "content-tide-clock-card.js",
+  "type": "lovelace"
+}
