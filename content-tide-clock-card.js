@@ -19,6 +19,7 @@ class TideClockCard extends HTMLElement {
       return;
     }
 
+    // Convertit "HH:mm" en Date, avec +1 jour si nécessaire
     function parseTimeToDate(timeStr, baseDate = new Date()) {
       const [hours, minutes] = timeStr.split(':').map(Number);
       const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes);
@@ -31,10 +32,33 @@ class TideClockCard extends HTMLElement {
     let tideHigh = parseTimeToDate(tideHighRaw, now);
     let tideLow = parseTimeToDate(tideLowRaw, tideHigh);
 
-    // Si la marée basse est avant la marée haute, on suppose qu'elle est le lendemain
     if (tideLow <= tideHigh) {
       tideLow.setDate(tideLow.getDate() + 1);
     }
+
+    // Détermine le cycle actif
+    let cycleStart, cycleEnd;
+
+    if (now < tideHigh) {
+      // Cycle précédent : marée basse estimée à -6h
+      cycleEnd = tideHigh;
+      cycleStart = new Date(tideHigh);
+      cycleStart.setHours(cycleStart.getHours() - 6);
+    } else if (now > tideLow) {
+      // Cycle suivant : marée haute estimée à +6h
+      cycleStart = tideLow;
+      cycleEnd = new Date(tideLow);
+      cycleEnd.setHours(cycleEnd.getHours() + 6);
+    } else {
+      // Cycle actuel : marée haute → marée basse
+      cycleStart = tideHigh;
+      cycleEnd = tideLow;
+    }
+
+    const totalDuration = cycleEnd - cycleStart;
+    const elapsed = now - cycleStart;
+    const progress = Math.max(0, Math.min(1, elapsed / totalDuration));
+    const angle = progress * 2 * Math.PI;
 
     const canvas = this.querySelector('#tideClock');
     if (!canvas) return;
@@ -54,21 +78,7 @@ class TideClockCard extends HTMLElement {
     ctx.fillText(`🌊 Marée haute: ${tideHighRaw}`, centerX, 40);
     ctx.fillText(`🌊 Marée basse: ${tideLowRaw}`, centerX, 260);
 
-    // Calcul de l'angle relatif
-    let progress = 0;
-    if (now >= tideHigh && now <= tideLow) {
-      const totalDuration = tideLow - tideHigh;
-      const elapsed = now - tideHigh;
-      progress = elapsed / totalDuration;
-    } else if (now < tideHigh) {
-      progress = 0;
-    } else {
-      progress = 1;
-    }
-
-    const angle = progress * 2 * Math.PI;
-
-    // Aiguille centrale (relative marée)
+    // Aiguille centrale
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
     ctx.lineTo(centerX + 90 * Math.cos(angle - Math.PI/2), centerY + 90 * Math.sin(angle - Math.PI/2));
