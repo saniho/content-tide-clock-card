@@ -10,9 +10,14 @@ class TideClockCard extends HTMLElement {
   }
 
   set hass(hass) {
-    const tideHigh = hass.states[this.config.tide_high].state;
-    const tideLow = hass.states[this.config.tide_low].state;
+    const tideHighRaw = hass.states[this.config.tide_high]?.state ?? null;
+    const tideLowRaw = hass.states[this.config.tide_low]?.state ?? null;
     const now = new Date();
+
+    if (!tideHighRaw || !tideLowRaw) return;
+
+    const tideHigh = new Date(tideHighRaw);
+    const tideLow = new Date(tideLowRaw);
 
     const canvas = this.querySelector('#tideClock');
     if (!canvas) return;
@@ -26,29 +31,31 @@ class TideClockCard extends HTMLElement {
     ctx.arc(centerX, centerY, 140, 0, 2 * Math.PI);
     ctx.stroke();
 
-    // Marées
+    // Marées (textes)
     ctx.font = '16px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`🌊 Marée haute: ${tideHigh}`, centerX, 40);
-    ctx.fillText(`🌊 Marée basse: ${tideLow}`, centerX, 260);
+    ctx.fillText(`🌊 Marée haute: ${tideHigh.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`, centerX, 40);
+    ctx.fillText(`🌊 Marée basse: ${tideLow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`, centerX, 260);
 
-    // Aiguilles
-    const hours = now.getHours() % 12;
-    const minutes = now.getMinutes();
-    const hourAngle = (Math.PI / 6) * hours + (Math.PI / 360) * minutes;
-    const minuteAngle = (Math.PI / 30) * minutes;
+    // Calcul de l'angle relatif
+    const totalDuration = tideLow - tideHigh;
+    const elapsed = now - tideHigh;
+    const progress = Math.max(0, Math.min(1, elapsed / totalDuration)); // clamp entre 0 et 1
+    const angle = progress * 2 * Math.PI;
 
-    // Heure
+    // Aiguille centrale (relative marée)
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
-    ctx.lineTo(centerX + 60 * Math.cos(hourAngle - Math.PI/2), centerY + 60 * Math.sin(hourAngle - Math.PI/2));
+    ctx.lineTo(centerX + 90 * Math.cos(angle - Math.PI/2), centerY + 90 * Math.sin(angle - Math.PI/2));
+    ctx.strokeStyle = '#0077be';
+    ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Minute
+    // Cercle central
     ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(centerX + 90 * Math.cos(minuteAngle - Math.PI/2), centerY + 90 * Math.sin(minuteAngle - Math.PI/2));
-    ctx.stroke();
+    ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = '#0077be';
+    ctx.fill();
   }
 
   getCardSize() {
