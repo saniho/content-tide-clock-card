@@ -19,13 +19,13 @@ class TideClockCard extends HTMLElement {
       return;
     }
 
-    // Fonction pour convertir "HH:mm" en Date
+    // Fonction pour convertir "HH:mm" en Date, avec +1 jour si l'heure est déjà passée
     function parseTimeToDate(timeStr) {
       const [hours, minutes] = timeStr.split(':').map(Number);
-      const date = new Date();
-      date.setHours(hours, minutes, 0, 0);
-      if (date < now) {
-        date.setDate(date.getDate() + 1); // si déjà passé, on suppose demain
+      const today = new Date();
+      const date = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes);
+      if (date < today) {
+        date.setDate(date.getDate() + 1);
       }
       return date;
     }
@@ -36,8 +36,7 @@ class TideClockCard extends HTMLElement {
     const canvas = this.querySelector('#tideClock');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const centerX = 150;
-    const centerY = 150;
+    const centerX = 150, centerY = 150;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -49,8 +48,8 @@ class TideClockCard extends HTMLElement {
     // Marées (textes)
     ctx.font = '16px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`🌊 MH: ${tideHighRaw}`, centerX, 40);
-    ctx.fillText(`🌊 MB: ${tideLowRaw}`, centerX, 260);
+    ctx.fillText(`🌊 Marée haute: ${tideHighRaw}`, centerX, 40);
+    ctx.fillText(`🌊 Marée basse: ${tideLowRaw}`, centerX, 260);
 
     // Calcul de l'angle relatif
     const totalDuration = tideLow - tideHigh;
