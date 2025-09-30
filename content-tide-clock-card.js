@@ -19,6 +19,7 @@ class TideClockCard extends HTMLElement {
       return;
     }
 
+    // Convertit "HH:mm" en Date, avec +1 jour si nécessaire
     function parseTimeToDate(timeStr, baseDate = new Date()) {
       const [hours, minutes] = timeStr.split(':').map(Number);
       const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes);
@@ -35,20 +36,23 @@ class TideClockCard extends HTMLElement {
       tideLow.setDate(tideLow.getDate() + 1);
     }
 
-    // Détermine le cycle actif
+    // Détermine le cycle actif pour l’aiguille
     let cycleStart, cycleEnd;
 
     if (now < tideHigh) {
+      // Cycle précédent : MB estimée à -6h
       cycleEnd = tideHigh;
       cycleStart = new Date(tideHigh);
       cycleStart.setHours(cycleStart.getHours() - 6);
-    } else if (now > tideLow) {
+    } else if (now >= tideHigh && now <= tideLow) {
+      // Cycle actuel : MH → MB
+      cycleStart = tideHigh;
+      cycleEnd = tideLow;
+    } else {
+      // Cycle suivant : MB → MH estimée à +6h
       cycleStart = tideLow;
       cycleEnd = new Date(tideLow);
       cycleEnd.setHours(cycleEnd.getHours() + 6);
-    } else {
-      cycleStart = tideHigh;
-      cycleEnd = tideLow;
     }
 
     const totalDuration = cycleEnd - cycleStart;
