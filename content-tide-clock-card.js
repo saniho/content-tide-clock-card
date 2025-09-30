@@ -19,22 +19,20 @@ class TideClockCard extends HTMLElement {
       return;
     }
 
-    // Fonction pour convertir "HH:mm" en Date
-    function parseTimeToDate(timeStr) {
+    function parseTimeToDate(timeStr, baseDate = new Date()) {
       const [hours, minutes] = timeStr.split(':').map(Number);
-      const today = new Date();
-      const date = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes);
-      if (date < today) {
+      const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes);
+      if (date < baseDate) {
         date.setDate(date.getDate() + 1);
       }
       return date;
     }
 
-    let tideHigh = parseTimeToDate(tideHighRaw);
-    let tideLow = parseTimeToDate(tideLowRaw);
+    let tideHigh = parseTimeToDate(tideHighRaw, now);
+    let tideLow = parseTimeToDate(tideLowRaw, tideHigh);
 
     // Si la marée basse est avant la marée haute, on suppose qu'elle est le lendemain
-    if (tideLow < tideHigh) {
+    if (tideLow <= tideHigh) {
       tideLow.setDate(tideLow.getDate() + 1);
     }
 
