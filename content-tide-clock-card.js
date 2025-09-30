@@ -19,7 +19,6 @@ class TideClockCard extends HTMLElement {
       return;
     }
 
-    // Convertit "HH:mm" en Date, avec +1 jour si nécessaire
     function parseTimeToDate(timeStr, baseDate = new Date()) {
       const [hours, minutes] = timeStr.split(':').map(Number);
       const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes);
@@ -40,17 +39,14 @@ class TideClockCard extends HTMLElement {
     let cycleStart, cycleEnd;
 
     if (now < tideHigh) {
-      // Cycle précédent : marée basse estimée à -6h
       cycleEnd = tideHigh;
       cycleStart = new Date(tideHigh);
       cycleStart.setHours(cycleStart.getHours() - 6);
     } else if (now > tideLow) {
-      // Cycle suivant : marée haute estimée à +6h
       cycleStart = tideLow;
       cycleEnd = new Date(tideLow);
       cycleEnd.setHours(cycleEnd.getHours() + 6);
     } else {
-      // Cycle actuel : marée haute → marée basse
       cycleStart = tideHigh;
       cycleEnd = tideLow;
     }
@@ -59,6 +55,24 @@ class TideClockCard extends HTMLElement {
     const elapsed = now - cycleStart;
     const progress = Math.max(0, Math.min(1, elapsed / totalDuration));
     const angle = progress * 2 * Math.PI;
+
+    // Détermine la prochaine marée
+    let nextTideLabel = '';
+    let nextTideTime;
+
+    if (now < tideHigh && (tideHigh < tideLow || now < tideLow)) {
+      nextTideLabel = 'Marée haute';
+      nextTideTime = tideHigh;
+    } else {
+      nextTideLabel = 'Marée basse';
+      nextTideTime = tideLow;
+    }
+
+    const diffMs = nextTideTime - now;
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const hoursLeft = Math.floor(diffMinutes / 60);
+    const minutesLeft = diffMinutes % 60;
+    const countdownText = `${nextTideLabel} dans ${hoursLeft}h ${minutesLeft}min`;
 
     const canvas = this.querySelector('#tideClock');
     if (!canvas) return;
@@ -77,6 +91,7 @@ class TideClockCard extends HTMLElement {
     ctx.textAlign = 'center';
     ctx.fillText(`🌊 Marée haute: ${tideHighRaw}`, centerX, 40);
     ctx.fillText(`🌊 Marée basse: ${tideLowRaw}`, centerX, 260);
+    ctx.fillText(countdownText, centerX, 220);
 
     // Aiguille centrale
     ctx.beginPath();
