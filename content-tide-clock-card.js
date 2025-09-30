@@ -36,7 +36,8 @@ class TideClockCard extends HTMLElement {
     const canvas = this.querySelector('#tideClock');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const centerX = 150, centerY = 150;
+    const centerX = 150;
+    const centerY = 150;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -48,8 +49,8 @@ class TideClockCard extends HTMLElement {
     // Marées (textes)
     ctx.font = '16px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`🌊 Marée haute: ${tideHighRaw}`, centerX, 40);
-    ctx.fillText(`🌊 Marée basse: ${tideLowRaw}`, centerX, 260);
+    ctx.fillText(`🌊 MH: ${tideHighRaw}`, centerX, 40);
+    ctx.fillText(`🌊 MB: ${tideLowRaw}`, centerX, 260);
 
     // Calcul de l'angle relatif
     const totalDuration = tideLow - tideHigh;
