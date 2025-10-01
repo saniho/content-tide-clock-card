@@ -113,8 +113,8 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 40);
         
-        // Marée Basse (Bas, position 6h)
-        ctx.fillText("MARÉE BASSE", centerX, centerY + radius - 15);
+        // Marée Basse (Bas, position 6h) - Monté à 5px (était -15)
+        ctx.fillText("MARÉE BASSE", centerX, centerY + radius - 20); 
 
         // --- 5. Titre Central ---
         ctx.font = '14px sans-serif';
@@ -153,19 +153,17 @@ class TideClockCard extends HTMLElement {
         // Marée Haute (en haut)
         ctx.fillStyle = '#FFFFFF'; // Fond blanc
         ctx.fillRect(centerX - boxWidth / 2, centerY - radius + 5, boxWidth, boxHeight);
-        // Ligne ctx.strokeRect(...) supprimée ici
         ctx.font = fontHour;
         ctx.fillStyle = textColor;
         ctx.fillText(tideHighRaw, centerX, centerY - radius + 18);
 
-        // Marée Basse (en bas)
+        // Marée Basse (en bas) - Monté la boîte de 5px (était -25)
         ctx.fillStyle = '#FFFFFF'; // Fond blanc
-        ctx.fillRect(centerX - boxWidth / 2, centerY + radius - 25, boxWidth, boxHeight);
-        // Ligne ctx.strokeRect(...) supprimée ici
+        ctx.fillRect(centerX - boxWidth / 2, centerY + radius - 30, boxWidth, boxHeight);
         ctx.font = fontHour;
         ctx.fillStyle = textColor;
-        ctx.fillText(tideLowRaw, centerX, centerY + radius - 12);
-        
+        ctx.fillText(tideLowRaw, centerX, centerY + radius - 17); // Monté le texte à l'intérieur de la boîte
+
         // Suppression du bloc d'information sous la carte (conservé de la version précédente)
         const tideInfoDiv = this.querySelector('#tideInfo');
         if (tideInfoDiv) {
