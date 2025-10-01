@@ -84,7 +84,7 @@ class TideClockCard extends HTMLElement {
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // --- 3. Points et Chiffres ---
+        // --- 3. Points et Chiffres (Ordre inversé) ---
         ctx.font = 'bold 16px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FFFFFF';
@@ -95,8 +95,10 @@ class TideClockCard extends HTMLElement {
             const currentAngle = (i * Math.PI / 6) - Math.PI / 2; // Angle en radians (commence à 12h)
             
             let label = '';
-            if (i >= 1 && i <= 5) label = i.toString();
-            if (i >= 7 && i <= 11) label = (12 - i).toString();
+            // Côté droit (de 1h à 5h) : 5, 4, 3, 2, 1
+            if (i >= 1 && i <= 5) label = (6 - i).toString();
+            // Côté gauche (de 7h à 11h) : 1, 2, 3, 4, 5
+            if (i >= 7 && i <= 11) label = (i - 6).toString();
             
             if (label) {
                 const x = centerX + markerRadius * Math.cos(currentAngle);
@@ -105,8 +107,8 @@ class TideClockCard extends HTMLElement {
             }
         }
 
-        // --- 4. Texte de Marée (Haut et Bas) ---
-        ctx.font = 'bold 24px sans-serif';
+        // --- 4. Texte de Marée (Haut et Bas) - Police réduite ---
+        ctx.font = 'bold 16px sans-serif'; // Réduit de 24px à 16px
         // Marée Haute (Haut, position 12h)
         ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 40);
         // Marée Basse (Bas, position 6h)
