@@ -19,7 +19,6 @@ class TideClockCard extends HTMLElement {
       return;
     }
 
-    // Convertit "HH:mm" en Date, avec +1 jour si nécessaire
     function parseTimeToDate(timeStr, baseDate = new Date()) {
       const [hours, minutes] = timeStr.split(':').map(Number);
       const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes);
@@ -40,7 +39,7 @@ class TideClockCard extends HTMLElement {
     let cycleStart, cycleEnd;
 
     if (now < tideHigh) {
-      // Cycle précédent : MB estimée à -6h
+      // Cycle précédent : MB estimée à -6h → MH
       cycleEnd = tideHigh;
       cycleStart = new Date(tideHigh);
       cycleStart.setHours(cycleStart.getHours() - 6);
