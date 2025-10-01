@@ -28,8 +28,6 @@ class TideClockCard extends HTMLElement {
         let tideHigh = parseTideTime(tideHighRaw);
         let tideLow = parseTideTime(tideLowRaw);
 
-        // Si l'une des marées est en arrière de l'autre, on la décale au jour suivant
-        // pour s'assurer que les deux sont dans le futur par rapport à maintenant
         if (tideHigh < now) {
             tideHigh.setDate(tideHigh.getDate() + 1);
         }
@@ -37,52 +35,76 @@ class TideClockCard extends HTMLElement {
             tideLow.setDate(tideLow.getDate() + 1);
         }
 
-        // Déterminer la prochaine marée à venir (la plus proche)
         const nextTide = tideHigh < tideLow ? tideHigh : tideLow;
         const prevTide = tideHigh < tideLow ? tideLow : tideHigh;
-        prevTide.setDate(prevTide.getDate() - 1); // La marée du cycle précédent
+        prevTide.setDate(prevTide.getDate() - 1);
 
-        // Calculer l'angle de l'aiguille
         const totalDuration = nextTide.getTime() - prevTide.getTime();
         const elapsed = now.getTime() - prevTide.getTime();
         const progress = elapsed / totalDuration;
-        const angle = (progress * 2 * Math.PI) - Math.PI / 2; // -PI/2 pour l'orientation verticale
+        const angle = (progress * 2 * Math.PI) - Math.PI / 2;
 
         const canvas = this.querySelector('#tideClock');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         const centerX = 150, centerY = 150;
+        const radius = 140;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Cadran
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 140, 0, 2 * Math.PI);
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 4;
         ctx.stroke();
 
-        // Marées (textes)
-        ctx.font = '16px sans-serif';
+        // Texte des marées
+        ctx.font = 'bold 20px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`🌊 Marée haute: ${tideHighRaw}`, centerX, 40);
-        ctx.fillText(`🌊 Marée basse: ${tideLowRaw}`, centerX, 260);
+        ctx.fillStyle = '#0077be';
+        ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 30);
+        ctx.fillStyle = '#666';
+        ctx.fillText("MARÉE BASSE", centerX, centerY + radius - 10);
 
-        // Aiguille centrale
+        // Chiffres de l'horloge (1 à 5)
+        ctx.font = '24px sans-serif';
+        ctx.fillStyle = '#333';
+        for (let i = 1; i <= 5; i++) {
+            const numAngle = (i * Math.PI / 3) - Math.PI / 2;
+            const x = centerX + (radius - 50) * Math.cos(numAngle);
+            const y = centerY + (radius - 50) * Math.sin(numAngle);
+            ctx.fillText(i.toString(), x, y + 8);
+        }
+
+        // Aiguille
         ctx.beginPath();
         ctx.moveTo(centerX, centerY);
-        ctx.lineTo(centerX + 90 * Math.cos(angle), centerY + 90 * Math.sin(angle));
+        ctx.lineTo(centerX + 110 * Math.cos(angle), centerY + 110 * Math.sin(angle));
         ctx.strokeStyle = '#0077be';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 6;
         ctx.stroke();
 
         // Cercle central
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+        ctx.arc(centerX, centerY, 8, 0, 2 * Math.PI);
         ctx.fillStyle = '#0077be';
         ctx.fill();
+
+        // Texte de la prochaine marée
+        const diffMs = nextTide.getTime() - now.getTime();
+        const diffMinutes = Math.floor(diffMs / 60000);
+        const hoursLeft = Math.floor(diffMinutes / 60);
+        const minutesLeft = diffMinutes % 60;
+        const countdownText = `Prochaine marée dans ${hoursLeft}h ${minutesLeft}min`;
+
+        ctx.font = '16px sans-serif';
+        ctx.fillStyle = '#333';
+        ctx.fillText(countdownText, centerX, centerY + 30);
     }
 
     getCardSize() {
-        return 3;
+        return 5;
     }
 }
 
