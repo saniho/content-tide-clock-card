@@ -142,7 +142,7 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         ctx.fill();
 
-        // --- 7. Affichage des heures dans le cadran (petits rectangles blancs) ---
+        // --- 7. Affichage des heures dans le cadran (petits rectangles blancs SANS bordure) ---
         
         // Paramètres des boîtes
         const boxWidth = 50;
@@ -153,8 +153,7 @@ class TideClockCard extends HTMLElement {
         // Marée Haute (en haut)
         ctx.fillStyle = '#FFFFFF'; // Fond blanc
         ctx.fillRect(centerX - boxWidth / 2, centerY - radius + 5, boxWidth, boxHeight);
-        ctx.strokeStyle = '#000000';
-        ctx.strokeRect(centerX - boxWidth / 2, centerY - radius + 5, boxWidth, boxHeight); // Bordure noire
+        // Ligne ctx.strokeRect(...) supprimée ici
         ctx.font = fontHour;
         ctx.fillStyle = textColor;
         ctx.fillText(tideHighRaw, centerX, centerY - radius + 18);
@@ -162,13 +161,12 @@ class TideClockCard extends HTMLElement {
         // Marée Basse (en bas)
         ctx.fillStyle = '#FFFFFF'; // Fond blanc
         ctx.fillRect(centerX - boxWidth / 2, centerY + radius - 25, boxWidth, boxHeight);
-        ctx.strokeStyle = '#000000';
-        ctx.strokeRect(centerX - boxWidth / 2, centerY + radius - 25, boxWidth, boxHeight); // Bordure noire
+        // Ligne ctx.strokeRect(...) supprimée ici
         ctx.font = fontHour;
         ctx.fillStyle = textColor;
         ctx.fillText(tideLowRaw, centerX, centerY + radius - 12);
         
-        // Suppression du bloc d'information sous la carte
+        // Suppression du bloc d'information sous la carte (conservé de la version précédente)
         const tideInfoDiv = this.querySelector('#tideInfo');
         if (tideInfoDiv) {
             tideInfoDiv.remove();
