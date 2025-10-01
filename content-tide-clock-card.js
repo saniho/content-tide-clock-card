@@ -41,7 +41,7 @@ class TideClockCard extends HTMLElement {
         }
 
         // Déterminer le cycle actuel
-        const nextTide = tideHigh < tideLow ? tideHigh : tide low;
+        const nextTide = tideHigh < tideLow ? tideHigh : tideLow;
         const prevTide = tideHigh < tideLow ? tideLow : tideHigh;
         prevTide.setDate(prevTide.getDate() - 1);
 
