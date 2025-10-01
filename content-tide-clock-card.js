@@ -5,7 +5,6 @@ class TideClockCard extends HTMLElement {
         this.innerHTML = `
             <ha-card style="background: #e0e0e0; padding: 20px;">
                 <canvas id="tideClock" width="300" height="300"></canvas>
-                <div id="tideInfo" style="text-align: center; font-family: sans-serif; padding-top: 10px; color: #333;"></div>
             </ha-card>
             <style>
                 canvas { display: block; margin: auto; }
@@ -109,8 +108,11 @@ class TideClockCard extends HTMLElement {
 
         // --- 4. Texte de Marée (Haut et Bas) - Police réduite à 12px ---
         ctx.font = 'bold 12px sans-serif'; // Police réduite
+        
         // Marée Haute (Haut, position 12h)
+        ctx.fillStyle = '#FFFFFF';
         ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 40);
+        
         // Marée Basse (Bas, position 6h)
         ctx.fillText("MARÉE BASSE", centerX, centerY + radius - 15);
 
@@ -140,15 +142,36 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         ctx.fill();
 
-        // --- 7. Affichage des heures sous la carte ---
+        // --- 7. Affichage des heures dans le cadran (petits rectangles blancs) ---
+        
+        // Paramètres des boîtes
+        const boxWidth = 50;
+        const boxHeight = 20;
+        const fontHour = 'bold 12px sans-serif';
+        const textColor = '#000000'; // Noir pour le contraste
+
+        // Marée Haute (en haut)
+        ctx.fillStyle = '#FFFFFF'; // Fond blanc
+        ctx.fillRect(centerX - boxWidth / 2, centerY - radius + 5, boxWidth, boxHeight);
+        ctx.strokeStyle = '#000000';
+        ctx.strokeRect(centerX - boxWidth / 2, centerY - radius + 5, boxWidth, boxHeight); // Bordure noire
+        ctx.font = fontHour;
+        ctx.fillStyle = textColor;
+        ctx.fillText(tideHighRaw, centerX, centerY - radius + 18);
+
+        // Marée Basse (en bas)
+        ctx.fillStyle = '#FFFFFF'; // Fond blanc
+        ctx.fillRect(centerX - boxWidth / 2, centerY + radius - 25, boxWidth, boxHeight);
+        ctx.strokeStyle = '#000000';
+        ctx.strokeRect(centerX - boxWidth / 2, centerY + radius - 25, boxWidth, boxHeight); // Bordure noire
+        ctx.font = fontHour;
+        ctx.fillStyle = textColor;
+        ctx.fillText(tideLowRaw, centerX, centerY + radius - 12);
+        
+        // Suppression du bloc d'information sous la carte
         const tideInfoDiv = this.querySelector('#tideInfo');
         if (tideInfoDiv) {
-            tideInfoDiv.innerHTML = `
-                <div style="display: flex; justify-content: space-around; font-size: 14px; margin-top: 10px;">
-                    <span>Marée Haute: <strong>${tideHighRaw}</strong></span>
-                    <span>Marée Basse: <strong>${tideLowRaw}</strong></span>
-                </div>
-            `;
+            tideInfoDiv.remove();
         }
     }
 
