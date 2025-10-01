@@ -41,7 +41,7 @@ class TideClockCard extends HTMLElement {
         }
 
         // Déterminer le cycle actuel
-        const nextTide = tideHigh < tideLow ? tideHigh : tideLow;
+        const nextTide = tideHigh < tideLow ? tideHigh : tide low;
         const prevTide = tideHigh < tideLow ? tideLow : tideHigh;
         prevTide.setDate(prevTide.getDate() - 1);
 
@@ -111,11 +111,13 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         
         // --- 4a. Marée Haute (Haut, position 12h) ---
-        ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 40);
+        const hauteYText = centerY - radius + 40;
+        ctx.fillText("MARÉE HAUTE", centerX, hauteYText);
         
         // --- 4b. Marée Basse (Bas, position 6h) - Texte centré ---
-        // Le texte est placé plus haut pour laisser de la place à l'heure en dessous.
-        ctx.fillText("MARÉE BASSE", centerX, centerY + radius - 45); 
+        // Position X du texte Marée Basse (symétrique à la Marée Haute)
+        const basseYText = centerY + radius - 40; // Symétrique à hauteYText
+        ctx.fillText("MARÉE BASSE", centerX, basseYText); 
 
         // --- 5. Titre Central ---
         ctx.font = '14px sans-serif';
@@ -152,20 +154,19 @@ class TideClockCard extends HTMLElement {
         const textColor = '#000000'; // Noir pour le contraste
 
         // --- 7a. Marée Haute (Heure AU-DESSUS du texte) ---
-        // Boîte (position Y inchangée : très haut)
+        const hauteYBox = centerY - radius + 5; // Boîte (position Y inchangée : très haut)
         ctx.fillStyle = '#FFFFFF'; // Fond blanc
-        ctx.fillRect(centerX - boxWidth / 2, centerY - radius + 5, boxWidth, boxHeight);
+        ctx.fillRect(centerX - boxWidth / 2, hauteYBox, boxWidth, boxHeight);
         ctx.font = fontHour;
         ctx.fillStyle = textColor;
         // Texte heure centré dans la boîte
-        ctx.fillText(tideHighRaw, centerX, centerY - radius + 18);
+        ctx.fillText(tideHighRaw, centerX, hauteYBox + 13);
 
         // --- 7b. Marée Basse (Heure EN-DESSOUS du texte) ---
-        const basseYText = centerY + radius - 45; // Position du texte MARÉE BASSE (point 4b)
-        const basseYBox = basseYText + 15; // Position de la boîte (15px sous le texte)
+        // Boîte placée SOUS le texte "MARÉE BASSE", en utilisant la même logique d'espacement que pour la Marée Haute.
+        const basseYBox = basseYText + 5; // 5 pixels sous le texte basseYText (pour que la boîte commence juste après)
         
         ctx.fillStyle = '#FFFFFF'; // Fond blanc
-        // Boîte placée SOUS le texte "MARÉE BASSE"
         ctx.fillRect(centerX - boxWidth / 2, basseYBox, boxWidth, boxHeight); 
         ctx.font = fontHour;
         ctx.fillStyle = textColor;
