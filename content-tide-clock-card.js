@@ -84,7 +84,7 @@ class TideClockCard extends HTMLElement {
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // --- 3. Points et Chiffres (Ordre inversé) ---
+        // --- 3. Points et Chiffres (Symétrie 5 à 1) ---
         ctx.font = 'bold 16px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FFFFFF';
@@ -95,10 +95,10 @@ class TideClockCard extends HTMLElement {
             const currentAngle = (i * Math.PI / 6) - Math.PI / 2; // Angle en radians (commence à 12h)
             
             let label = '';
-            // Côté droit (de 1h à 5h) : 5, 4, 3, 2, 1
+            // Côté droit (de 1h à 5h) : 5, 4, 3, 2, 1 (i=1 -> 5, i=5 -> 1)
             if (i >= 1 && i <= 5) label = (6 - i).toString();
-            // Côté gauche (de 7h à 11h) : 1, 2, 3, 4, 5
-            if (i >= 7 && i <= 11) label = (i - 6).toString();
+            // Côté gauche (de 7h à 11h) : 5, 4, 3, 2, 1 (i=7 -> 5, i=11 -> 1)
+            if (i >= 7 && i <= 11) label = (12 - i).toString();
             
             if (label) {
                 const x = centerX + markerRadius * Math.cos(currentAngle);
@@ -107,8 +107,8 @@ class TideClockCard extends HTMLElement {
             }
         }
 
-        // --- 4. Texte de Marée (Haut et Bas) - Police réduite ---
-        ctx.font = 'bold 16px sans-serif'; // Réduit de 24px à 16px
+        // --- 4. Texte de Marée (Haut et Bas) - Police réduite à 12px ---
+        ctx.font = 'bold 12px sans-serif'; // Police réduite
         // Marée Haute (Haut, position 12h)
         ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 40);
         // Marée Basse (Bas, position 6h)
@@ -117,7 +117,7 @@ class TideClockCard extends HTMLElement {
         // --- 5. Titre Central ---
         ctx.font = '14px sans-serif';
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillText("HORAIRES DE MARÉE", centerX, centerY + 10);
+        ctx.fillText("HORAIRES DES MARÉES", centerX, centerY + 10);
         
         // --- 6. Aiguille ---
         ctx.beginPath();
