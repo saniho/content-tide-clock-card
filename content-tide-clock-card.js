@@ -89,39 +89,28 @@ class TideClockCard extends HTMLElement {
         let angle;
 
         // Note: Dans le système de coordonnées Canvas standard, 0 rad est à droite, +PI/2 est en bas, -PI/2 est en haut.
+        // L'axe X semble être inversé dans l'environnement d'exécution, nous corrigeons donc les formules.
         
         if (isNextTideHigh) {
             // Marée MONTANTE: Basse (prevTide) -> Haute (nextTide)
-            // Le mouvement doit être anti-horaire (côté gauche du cadran).
-            // Le point de départ (progress=0) doit être +PI/2 (Bas).
-            // Le point d'arrivée (progress=1) doit être -PI/2 (Haut).
-            // Pour forcer l'aiguille sur le côté GAUCHE, nous utilisons la formule de la marée DESCENDANTE et nous la faisons pivoter de 180 degrés.
-            
-            // Formule de marée descendante : (-PI/2) + (progress * PI) (côté droit)
-            // Pour la faire passer à gauche, nous soustrayons le progrès à partir de +PI/2 (comme une horloge normale)
-            angle = (Math.PI / 2) - (progress * Math.PI); 
-
+            // L'aiguille doit se déplacer sur le côté GAUCHE (anti-horaire).
+            // Position initiale: +PI/2 (Bas)
+            // Position finale: -PI/2 (Haut)
+            // Pour forcer le mouvement à GAUCHE, nous utilisons la formule qui va de Haut à Bas mais inversée (multipliée par -1)
+            // Si l'axe X est inversé, la formule standard (PI/2) - (progress * PI) fonctionne comme si elle était à droite.
+            // Nous utilisons la formule pour le côté DROIT et l'inversons:
+            angle = - ((-Math.PI / 2) + (progress * Math.PI)); 
             
         } else {
             // Marée DESCENDANTE: Haute (prevTide) -> Basse (nextTide)
-            // Le mouvement doit être horaire (côté droit du cadran).
-            // Le point de départ (progress=0) doit être -PI/2 (Haut).
-            // Le point d'arrivée (progress=1) doit être +PI/2 (Bas).
-            // Pour forcer l'aiguille sur le côté DROIT, nous utilisons la formule de la marée MONTANTE et nous la faisons pivoter de 180 degrés.
-
-            // Formule de marée montante : (PI/2) - (progress * PI) (côté gauche)
-            // Pour la faire passer à droite, nous ajoutons le progrès à partir de -PI/2
-            angle = (-Math.PI / 2) + (progress * Math.PI);
+            // L'aiguille doit se déplacer sur le côté DROIT (horaire).
+            // Position initiale: -PI/2 (Haut)
+            // Position finale: +PI/2 (Bas)
+            // Nous utilisons la formule pour le côté GAUCHE et l'inversons:
+            angle = - ((Math.PI / 2) - (progress * Math.PI));
         }
         
-        // Je pense que l'environnement d'exécution inverse l'axe X.
-        // Tentons une symétrie par rapport à l'axe Y pour inverser gauche/droite (angle = -angle)
-        // Si la marée est montante, elle est sur le côté gauche. Si elle est descendante, elle est sur le côté droit.
-        
-        // Vérification de la position pour votre cas (Montante) :
-        // Si Montante: nous utilisons la formule (PI/2) - (progress * PI) (ce qui donne normalement côté GAUCHE)
-        // Si elle apparaît à droite, c'est que l'axe des X est inversé.
-        angle = -angle; // Appliquer la symétrie latérale
+        // Retrait de l'inversion finale "angle = -angle;"
 
         
         // --- 4. Dessin du Cadran (Aucun changement) ---
