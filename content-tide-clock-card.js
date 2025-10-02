@@ -47,17 +47,21 @@ class TideClockCard extends HTMLElement {
 
     /**
      * Le setter HASS est appelé lorsqu'une entité change.
-     * NE DOIT PAS APPELER updateTideClock directement pour éviter le RangeError.
-     * Il se contente de stocker l'état et de déclencher le premier dessin si nécessaire.
+     * Le premier dessin est reporté via setTimeout(0) pour casser la boucle de rendu de Home Assistant.
      */
     set hass(hass) {
         this.hass = hass; 
         
-        // Déclenche le premier dessin immédiatement après avoir reçu les données HASS
-        // Ceci est essentiel car HASS ne rappellera pas set hass(hass) si on ne le lui demande pas.
+        // Déclenche le premier dessin immédiatement (mais après la fin du cycle d'appel actuel)
         if (!this.isInitialDrawDone) {
-            this.updateTideClock(); 
-            this.isInitialDrawDone = true;
+            // Utilisation de setTimeout(0) pour découpler le dessin du cycle de set hass
+            setTimeout(() => {
+                // Vérification à nouveau au cas où set hass est appelé plusieurs fois rapidement
+                if (!this.isInitialDrawDone) {
+                    this.updateTideClock(); 
+                    this.isInitialDrawDone = true;
+                }
+            }, 0);
         }
     }
 
