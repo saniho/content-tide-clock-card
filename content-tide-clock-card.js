@@ -16,9 +16,16 @@ class TideClockCard extends HTMLElement {
 
     setConfig(config) {
         this.config = config;
+        // Définition de la structure DOM stable une seule fois dans setConfig
         this.innerHTML = `
             <ha-card style="background: #e0e0e0; padding: 20px;">
-                <canvas id="tideClock" width="300" height="300"></canvas>
+                <!-- Conteneur d'erreurs stable -->
+                <div id="error-container" style="display: none; padding: 1em; color: black; text-align: center;"></div>
+                
+                <!-- Conteneur principal du cadran -->
+                <div id="clock-container">
+                    <canvas id="tideClock" width="300" height="300"></canvas>
+                </div>
             </ha-card>
             <style>
                 canvas { display: block; margin: auto; }
@@ -29,7 +36,6 @@ class TideClockCard extends HTMLElement {
         this.cleanup();
         
         // Démarrer le rafraîchissement automatique de l'aiguille toutes les 60 secondes
-        // Le setInterval est la seule source de mise à jour périodique.
         this.updateInterval = setInterval(() => this.updateTideClock(), 60000); 
     }
     
@@ -68,18 +74,28 @@ class TideClockCard extends HTMLElement {
     updateTideClock() {
         if (!this.hass || !this.config) return;
 
+        const errorContainer = this.querySelector('#error-container');
+        const clockContainer = this.querySelector('#clock-container');
+
         // Récupération des heures de marée (string HH:MM)
         const tideHighRaw = this.hass.states[this.config.tide_high]?.state ?? null;
         const tideLowRaw = this.hass.states[this.config.tide_low]?.state ?? null;
         const now = new Date(); // Heure actuelle du système (sera rafraîchie chaque minute)
 
         if (!tideHighRaw || !tideLowRaw) {
-            // Afficher le message d'erreur uniquement si les entités ne sont pas disponibles
-            if (!this.querySelector('.error-message')) {
-                this.innerHTML = `<ha-card><div class="error-message" style="padding:1em;">Erreur: Entités marée non disponibles. Vérifiez tide_high et tide_low.</div></ha-card>`;
+            // NE PAS modifier this.innerHTML ici. Modifier uniquement le conteneur d'erreurs.
+            if (clockContainer) clockContainer.style.display = 'none';
+            if (errorContainer) {
+                errorContainer.innerHTML = `Erreur: Entités marée non disponibles. Vérifiez tide_high (${this.config.tide_high}) et tide_low (${this.config.tide_low}).`;
+                errorContainer.style.display = 'block';
             }
             return;
         }
+        
+        // Cacher le message d'erreur et afficher l'horloge
+        if (errorContainer) errorContainer.style.display = 'none';
+        if (clockContainer) clockContainer.style.display = 'block';
+
 
         // --- Utilisation de la nouvelle méthode de classe ---
         let tideHigh = this.parseTideTime(tideHighRaw, now);
