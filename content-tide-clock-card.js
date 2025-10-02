@@ -1,12 +1,10 @@
 class TideClockCard extends HTMLElement {
-    // Variable pour stocker l'ID de l'intervalle de rafraîchissement
-    updateInterval = null; 
     
     /**
      * Parse l'heure HH:MM en un objet Date pour la journée actuelle/spécifiée.
+     * Définie à l'extérieur de set hass pour éviter l'erreur de pile d'appels.
      */
     parseTideTime(timeStr, baseDate) {
-        // baseDate est passée en argument
         const [hours, minutes] = timeStr.split(':').map(Number);
         const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes, 0, 0);
         return date;
@@ -14,91 +12,39 @@ class TideClockCard extends HTMLElement {
 
     setConfig(config) {
         this.config = config;
-        // Définition de la structure DOM stable une seule fois dans setConfig
+        // La carte doit avoir un fond sombre pour faire ressortir le cadran.
         this.innerHTML = `
             <ha-card style="background: #e0e0e0; padding: 20px;">
-                <!-- Conteneur d'erreurs stable -->
-                <div id="error-container" style="display: none; padding: 1em; color: black; text-align: center;"></div>
-                
-                <!-- Conteneur principal du cadran -->
-                <div id="clock-container">
-                    <canvas id="tideClock" width="300" height="300"></canvas>
-                </div>
+                <canvas id="tideClock" width="300" height="300"></canvas>
             </ha-card>
             <style>
                 canvas { display: block; margin: auto; }
             </style>
         `;
-        
-        // Nettoyer l'intervalle précédent si la configuration change
-        this.cleanup();
-        
-        // Démarrer le rafraîchissement automatique de l'aiguille toutes les 60 secondes
-        this.updateInterval = setInterval(() => this.updateTideClock(), 60000); 
-
-        // FORCER le premier dessin immédiatement après la configuration.
-        // C'est l'endroit le plus sûr pour éviter le RangeError lié à HASS.
-        this.updateTideClock(); 
-    }
-    
-    // Fonction de nettoyage à appeler quand la carte est retirée ou reconfigurée
-    disconnectedCallback() {
-        this.cleanup();
     }
 
-    cleanup() {
-        if (this.updateInterval) {
-            clearInterval(this.updateInterval);
-            this.updateInterval = null;
-        }
-    }
-
-    /**
-     * Le setter HASS est appelé lorsqu'une entité change.
-     * Pour éviter le RangeError, cette méthode NE FAIT QUE stocker l'état et RIEN D'AUTRE.
-     * Le dessin est géré par updateTideClock, appelé par setInterval et setConfig.
-     */
     set hass(hass) {
-        // Simple stockage de l'état, sans aucune logique de dessin pour éviter la boucle infinie.
-        this.hass = hass; 
-    }
-
-    updateTideClock() {
-        // On vérifie le hass ICI, et non dans set hass.
-        if (!this.hass || !this.config) return;
-
-        const errorContainer = this.querySelector('#error-container');
-        const clockContainer = this.querySelector('#clock-container');
-
-        // Récupération des heures de marée (string HH:MM)
-        const tideHighRaw = this.hass.states[this.config.tide_high]?.state ?? null;
-        const tideLowRaw = this.hass.states[this.config.tide_low]?.state ?? null;
-        const now = new Date(); // Heure actuelle du système (sera rafraîchie chaque minute)
+        // Définition des variables principales
+        const tideHighRaw = hass.states[this.config.tide_high]?.state ?? null;
+        const tideLowRaw = hass.states[this.config.tide_low]?.state ?? null;
+        const now = new Date(); // Heure actuelle
 
         if (!tideHighRaw || !tideLowRaw) {
-            // Modification du contenu du conteneur d'erreurs (DOM stable)
-            if (clockContainer) clockContainer.style.display = 'none';
-            if (errorContainer) {
-                errorContainer.innerHTML = `Erreur: Entités marée non disponibles. Vérifiez tide_high (${this.config.tide_high}) et tide_low (${this.config.tide_low}).`;
-                errorContainer.style.display = 'block';
-            }
+            this.innerHTML = `<ha-card><div style="padding:1em; color: black; text-align: center;">Erreur: Entités marée non disponibles.</div></ha-card>`;
             return;
         }
+
+        // --- Logique de calcul des marées ---
         
-        // Cacher le message d'erreur et afficher l'horloge
-        if (errorContainer) errorContainer.style.display = 'none';
-        if (clockContainer) clockContainer.style.display = 'block';
-
-
-        // --- Utilisation de la nouvelle méthode de classe ---
-        let tideHigh = this.parseTideTime(tideHighRaw, now);
-        let tideLow = this.parseTideTime(tideLowRaw, now);
-
         // Durée exacte d'un demi-cycle lunaire (6h 12m 30s) en millisecondes
         const HALF_TIDAL_CYCLE_MS = (6 * 60 * 60 * 1000) + (12.5 * 60 * 1000); 
         const FULL_TIDAL_CYCLE_MS = HALF_TIDAL_CYCLE_MS * 2;
         
-        // --- 1. Positionnement des marées autour de l'heure actuelle ---
+        let tideHigh = this.parseTideTime(tideHighRaw, now);
+        let tideLow = this.parseTideTime(tideLowRaw, now);
+
+
+        // --- 1. Positionnement des marées autour de l'heure actuelle (Normalisation) ---
         
         // 1a. Normaliser tideHigh: trouver la marée haute la plus proche de l'heure actuelle
         let currentHigh = new Date(tideHigh.getTime());
@@ -119,7 +65,6 @@ class TideClockCard extends HTMLElement {
         }
 
         // --- 2. Détermination du cycle précédent et suivant ---
-        
         let nextTide;
         let prevTide;
         let isNextTideHigh;
@@ -128,6 +73,7 @@ class TideClockCard extends HTMLElement {
         const futureTides = [currentHigh, currentLow].filter(t => t.getTime() > now.getTime());
         
         if (futureTides.length === 0) {
+            // Cas où les deux marées normalisées sont dans le passé, on prend la plus récente et on projette la suivante
             const lastTide = currentHigh.getTime() > currentLow.getTime() ? currentHigh : currentLow;
             
             const wasLastTideHigh = (lastTide.getTime() === currentHigh.getTime());
@@ -145,17 +91,14 @@ class TideClockCard extends HTMLElement {
             prevTide = new Date(nextTide.getTime() - HALF_TIDAL_CYCLE_MS);
         }
 
-        // --- 3. Calcul de la progression de l'aiguille ---
+        // --- 3. Calcul de la progression et de l'angle ---
         
         const totalDuration = HALF_TIDAL_CYCLE_MS;
         const elapsed = now.getTime() - prevTide.getTime();
         
         let progress = elapsed / totalDuration;
-        
-        // Assurer que progress est entre 0 et 1
-        progress = Math.min(1, Math.max(0, progress));
-        
-        // --- 4. Calcul de l'angle (Radians) ---
+        progress = Math.min(1, Math.max(0, progress)); // Borner entre 0 et 1
+
         // 12h = -Math.PI / 2 (Marée Haute)
         // 6h = Math.PI / 2 (Marée Basse)
 
@@ -164,13 +107,12 @@ class TideClockCard extends HTMLElement {
         if (isNextTideHigh) {
             // Cycle: Basse -> Haute (de Math.PI / 2 vers -Math.PI / 2). L'angle diminue.
             angle = (Math.PI / 2) - (progress * Math.PI); 
-
         } else {
             // Cycle: Haute -> Basse (de -Math.PI / 2 vers Math.PI / 2). L'angle augmente.
             angle = (-Math.PI / 2) + (progress * Math.PI);
         }
-
-        // --- 5. Dessin du Cadran ---
+        
+        // --- 4. Dessin du Cadran (Identique au script fourni) ---
         const canvas = this.querySelector('#tideClock');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -214,7 +156,6 @@ class TideClockCard extends HTMLElement {
             const currentAngle = (i * Math.PI / 6) - Math.PI / 2;
             
             let label = '';
-            // 5, 4, 3, 2, 1 pour les deux côtés
             if (i >= 1 && i <= 5) label = (6 - i).toString();
             if (i >= 7 && i <= 11) label = (12 - i).toString();
             
