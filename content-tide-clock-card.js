@@ -89,28 +89,22 @@ class TideClockCard extends HTMLElement {
         let angle;
 
         // Note: Dans le système de coordonnées Canvas standard, 0 rad est à droite, +PI/2 est en bas, -PI/2 est en haut.
-        // L'axe X semble être inversé dans l'environnement d'exécution, nous corrigeons donc les formules.
         
         if (isNextTideHigh) {
             // Marée MONTANTE: Basse (prevTide) -> Haute (nextTide)
-            // L'aiguille doit se déplacer sur le côté GAUCHE (anti-horaire).
-            // Position initiale: +PI/2 (Bas)
-            // Position finale: -PI/2 (Haut)
-            // Pour forcer le mouvement à GAUCHE, nous utilisons la formule qui va de Haut à Bas mais inversée (multipliée par -1)
-            // Si l'axe X est inversé, la formule standard (PI/2) - (progress * PI) fonctionne comme si elle était à droite.
-            // Nous utilisons la formule pour le côté DROIT et l'inversons:
-            angle = - ((-Math.PI / 2) + (progress * Math.PI)); 
+            // L'aiguille doit se déplacer du bas (+PI/2) vers le haut (-PI/2). (Mouvement anti-horaire)
+            // Pour aller à GAUCHE, on soustrait l'angle.
+            angle = (Math.PI / 2) - (progress * Math.PI); 
             
         } else {
             // Marée DESCENDANTE: Haute (prevTide) -> Basse (nextTide)
-            // L'aiguille doit se déplacer sur le côté DROIT (horaire).
-            // Position initiale: -PI/2 (Haut)
-            // Position finale: +PI/2 (Bas)
-            // Nous utilisons la formule pour le côté GAUCHE et l'inversons:
-            angle = - ((Math.PI / 2) - (progress * Math.PI));
+            // L'aiguille doit se déplacer du haut (-PI/2) vers le bas (+PI/2). (Mouvement horaire)
+            // Pour aller à DROITE, on ajoute l'angle.
+            angle = (-Math.PI / 2) + (progress * Math.PI);
         }
         
-        // Retrait de l'inversion finale "angle = -angle;"
+        // Correction de l'inversion latérale de l'environnement d'exécution:
+        angle = -angle; 
 
         
         // --- 4. Dessin du Cadran (Aucun changement) ---
