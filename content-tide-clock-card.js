@@ -71,7 +71,7 @@ class TideClockCard extends HTMLElement {
             // Cela signifie que nous avons sauté un cycle (prevTide est trop ancienne)
             // On avance tout le cycle d'un demi-cycle.
             prevTide.setTime(prevTide.getTime() + HALF_TIDAL_CYCLE_MS);
-            nextTide.setTime(nextTide.getTime() + HALF_TIDAL_CYCLE_MS);
+            nextTide.setTime(nextTide.getTime() + HALF_TIDETAL_CYCLE_MS);
             isNextTideHigh = !isNextTideHigh;
         }
 
@@ -88,23 +88,24 @@ class TideClockCard extends HTMLElement {
 
         let angle;
 
-        // Note: Dans le système de coordonnées Canvas standard, 0 rad est à droite, +PI/2 est en bas, -PI/2 est en haut.
+        // Nouvelle logique : Inversion des formules pour compenser la symétrie latérale de l'environnement Canvas.
+        // On retire l'inversion finale `angle = -angle;`
         
         if (isNextTideHigh) {
             // Marée MONTANTE: Basse (prevTide) -> Haute (nextTide)
-            // L'aiguille doit se déplacer du bas (+PI/2) vers le haut (-PI/2). (Mouvement anti-horaire)
-            // Pour aller à GAUCHE, on soustrait l'angle.
-            angle = (Math.PI / 2) - (progress * Math.PI); 
+            // L'aiguille doit se déplacer du bas vers le haut sur le côté GAUCHE.
+            // On utilise la formule qui, normalement, fait la descente à DROITE.
+            angle = (-Math.PI / 2) + (progress * Math.PI); 
             
         } else {
             // Marée DESCENDANTE: Haute (prevTide) -> Basse (nextTide)
-            // L'aiguille doit se déplacer du haut (-PI/2) vers le bas (+PI/2). (Mouvement horaire)
-            // Pour aller à DROITE, on ajoute l'angle.
-            angle = (-Math.PI / 2) + (progress * Math.PI);
+            // L'aiguille doit se déplacer du haut vers le bas sur le côté DROIT.
+            // On utilise la formule qui, normalement, fait la montée à GAUCHE.
+            angle = (Math.PI / 2) - (progress * Math.PI);
         }
         
-        // Correction de l'inversion latérale de l'environnement d'exécution:
-        angle = -angle; 
+        // L'ancienne ligne de correction est supprimée:
+        // angle = -angle; 
 
         
         // --- 4. Dessin du Cadran (Aucun changement) ---
