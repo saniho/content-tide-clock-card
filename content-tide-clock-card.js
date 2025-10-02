@@ -1,8 +1,6 @@
 class TideClockCard extends HTMLElement {
     // Variable pour stocker l'ID de l'intervalle de rafraîchissement
     updateInterval = null; 
-    // Flag pour s'assurer que le premier dessin est fait rapidement
-    isInitialDrawDone = false;
     
     /**
      * Parse l'heure HH:MM en un objet Date pour la journée actuelle/spécifiée.
@@ -37,6 +35,10 @@ class TideClockCard extends HTMLElement {
         
         // Démarrer le rafraîchissement automatique de l'aiguille toutes les 60 secondes
         this.updateInterval = setInterval(() => this.updateTideClock(), 60000); 
+
+        // FORCER le premier dessin immédiatement après la configuration.
+        // C'est l'endroit le plus sûr pour éviter le RangeError lié à HASS.
+        this.updateTideClock(); 
     }
     
     // Fonction de nettoyage à appeler quand la carte est retirée ou reconfigurée
@@ -53,25 +55,16 @@ class TideClockCard extends HTMLElement {
 
     /**
      * Le setter HASS est appelé lorsqu'une entité change.
-     * Le premier dessin est reporté via setTimeout(0) pour casser la boucle de rendu de Home Assistant.
+     * Pour éviter le RangeError, cette méthode NE FAIT QUE stocker l'état et RIEN D'AUTRE.
+     * Le dessin est géré par updateTideClock, appelé par setInterval et setConfig.
      */
     set hass(hass) {
+        // Simple stockage de l'état, sans aucune logique de dessin pour éviter la boucle infinie.
         this.hass = hass; 
-        
-        // Déclenche le premier dessin immédiatement (mais après la fin du cycle d'appel actuel)
-        if (!this.isInitialDrawDone) {
-            // Utilisation de setTimeout(0) pour découpler le dessin du cycle de set hass
-            setTimeout(() => {
-                // Vérification à nouveau au cas où set hass est appelé plusieurs fois rapidement
-                if (!this.isInitialDrawDone) {
-                    this.updateTideClock(); 
-                    this.isInitialDrawDone = true;
-                }
-            }, 0);
-        }
     }
 
     updateTideClock() {
+        // On vérifie le hass ICI, et non dans set hass.
         if (!this.hass || !this.config) return;
 
         const errorContainer = this.querySelector('#error-container');
@@ -83,7 +76,7 @@ class TideClockCard extends HTMLElement {
         const now = new Date(); // Heure actuelle du système (sera rafraîchie chaque minute)
 
         if (!tideHighRaw || !tideLowRaw) {
-            // NE PAS modifier this.innerHTML ici. Modifier uniquement le conteneur d'erreurs.
+            // Modification du contenu du conteneur d'erreurs (DOM stable)
             if (clockContainer) clockContainer.style.display = 'none';
             if (errorContainer) {
                 errorContainer.innerHTML = `Erreur: Entités marée non disponibles. Vérifiez tide_high (${this.config.tide_high}) et tide_low (${this.config.tide_low}).`;
