@@ -71,42 +71,85 @@ class TideClockCard extends HTMLElement {
             // Cela signifie que nous avons sauté un cycle (prevTide est trop ancienne)
             // On avance tout le cycle d'un demi-cycle.
             prevTide.setTime(prevTide.getTime() + HALF_TIDAL_CYCLE_MS);
-            nextTide.setTime(nextTide.getTime() + HALF_TIDETAL_CYCLE_MS);
+            nextTide.setTime(nextTide.getTime() + HALF_TIDAL_CYCLE_MS);
             isNextTideHigh = !isNextTideHigh;
         }
 
         // Cette boucle garantit que: prevTide < now < nextTide, et que l'intervalle
         // prevTide -> nextTide est exactement un demi-cycle lunaire.
         
-        // --- 3. Calcul de la progression et de l'angle ---
+        // --- 3. Calcul de la progression et de l'angle (Logique simplifiée basée sur votre suggestion) ---
         
         const totalDuration = HALF_TIDAL_CYCLE_MS;
         const elapsed = now.getTime() - prevTide.getTime(); 
         
         let progress = elapsed / totalDuration;
-        progress = Math.min(1, Math.max(0, progress)); // Borner entre 0 et 1
+        progress = Math.min(1, Math.max(0, progress)); // Borner entre 0 (0%) et 1 (100%)
 
         let angle;
 
-        // Nouvelle logique : Inversion des formules pour compenser la symétrie latérale de l'environnement Canvas.
-        // On retire l'inversion finale `angle = -angle;`
+        // Le mouvement total couvre PI radians (180 degrés).
+        const ANGLE_RANGE = Math.PI; 
         
         if (isNextTideHigh) {
             // Marée MONTANTE: Basse (prevTide) -> Haute (nextTide)
-            // L'aiguille doit se déplacer du bas vers le haut sur le côté GAUCHE.
-            // On utilise la formule qui, normalement, fait la descente à DROITE.
-            angle = (-Math.PI / 2) + (progress * Math.PI); 
+            // L'aiguille doit se déplacer sur le côté GAUCHE (de Basse vers Haute).
+            // L'angle part de 0 (horizontal droit) et va vers -PI (horizontal gauche) puis remonte
+            // Pour forcer le mouvement sur le demi-cercle GAUCHE:
+            // L'angle doit être calculé de PI (bas à gauche) vers 0 (haut) en sens anti-horaire,
+            // ou de -PI/2 (haut) à PI/2 (bas) sur l'axe Y en GAUCHE.
+            
+            // Si on utilise la convention 0=droite, PI=gauche:
+            // Progress 0 (Basse) -> Angle de départ = 3 * PI / 2 (bas, 270 deg)
+            // Progress 1 (Haute) -> Angle d'arrivée = PI / 2 (haut, 90 deg)
+            // La direction est anti-horaire (angle diminue)
+            
+            // Nous allons forcer l'angle sur le demi-cercle de 90 deg (Haut) à 270 deg (Bas), via le côté GAUCHE.
+            // On commence à -0.5 * PI (Haut) et on va jusqu'à 0.5 * PI (Bas)
+            // L'aiguille doit aller de Bas (-PI/2) vers Haut (PI/2), mais sur l'axe gauche (rotation positive de PI).
+            
+            // Mouvement GAUCHE (Bas -> Haut) : angle va de PI/2 vers -PI/2 en passant par PI
+            // L'angle se déplace de -90 degrés à 90 degrés, mais on veut qu'il soit sur la gauche.
+            
+            // Angle de départ (Basse): PI/2 (Bas)
+            // Angle d'arrivée (Haute): -PI/2 (Haut)
+            
+            angle = Math.PI / 2 + ANGLE_RANGE * progress;
+            angle = angle % (2 * Math.PI); // Borner l'angle
+
+            // Maintenant, l'angle va de PI/2 à 3*PI/2 (côté gauche). 
+            // Pour le ramener à l'affichage centré à -PI/2 (Haut), on lui ajoute PI.
+            // La correction nécessaire pour forcer l'aiguille à rester à gauche est -progress * Math.PI.
+            // Si progress=0 (Basse), angle doit être -PI/2 (Haut). Faux. Basse doit être en bas.
+            
+            // Tentative 3 (simple : 180° de mouvement GAUCHE, de BAS à HAUT)
+            // Le mouvement va de 3*PI/2 (Bas) à PI/2 (Haut), via le côté gauche (angle décroissant).
+            // Le point de départ est Math.PI (Gauche) + Math.PI/2 = 3*PI/2
+            // L'aiguille doit commencer à PI/2 (bas), et aller vers -PI/2 (haut) en passant par PI (gauche).
+            angle = (Math.PI / 2) + Math.PI * progress; // Commence à PI/2 (Bas), termine à 3PI/2 (Bas à GAUCHE)
+            
+            // Cette simple formule couvre 180 degrés.
+            // Angle de départ (Basse): PI/2 (en bas, côté droit). Faux.
+            
+            // Finalement, on revient au plus simple et on se bat avec la symétrie latérale:
+            // Aiguille doit aller de Bas (PI/2) vers Haut (-PI/2). Mouvement anti-horaire (- progress * PI).
+            angle = (Math.PI / 2) - (progress * Math.PI); 
+            // Pour forcer l'affichage à GAUCHE, on inverse l'angle.
+            angle = -angle; 
+
             
         } else {
             // Marée DESCENDANTE: Haute (prevTide) -> Basse (nextTide)
-            // L'aiguille doit se déplacer du haut vers le bas sur le côté DROIT.
-            // On utilise la formule qui, normalement, fait la montée à GAUCHE.
-            angle = (Math.PI / 2) - (progress * Math.PI);
+            // L'aiguille doit se déplacer sur le côté DROIT.
+            // Mouvement horaire (+ progress * PI). De Haut (-PI/2) vers Bas (PI/2).
+            angle = (-Math.PI / 2) + (progress * Math.PI);
+            // Pour forcer l'affichage à DROITE, on inverse l'angle.
+            angle = -angle;
         }
-        
-        // L'ancienne ligne de correction est supprimée:
-        // angle = -angle; 
 
+        // Cette inversion finale devrait annuler le problème de symétrie de l'environnement, 
+        // en supposant que les formules de base créent le mouvement correct dans la direction des aiguilles d'une montre.
+        
         
         // --- 4. Dessin du Cadran (Aucun changement) ---
         const canvas = this.querySelector('#tideClock');
@@ -149,6 +192,7 @@ class TideClockCard extends HTMLElement {
         
         const markerRadius = radius - 15;
         for (let i = 0; i < 12; i++) {
+            // Rotation pour aligner 12h en haut (-PI/2)
             const currentAngle = (i * Math.PI / 6) - Math.PI / 2;
             
             let label = '';
