@@ -82,6 +82,7 @@ class TideClockCard extends HTMLElement {
         } else {
             // Trouver la prochaine marée dans le futur
             nextTide = futureTides.reduce((a, b) => (a.getTime() < b.getTime() ? a : b));
+            // isNextTideHigh est VRAI si la prochaine marée trouvée correspond à l'heure de la Marée Haute
             isNextTideHigh = (nextTide.getTime() === currentHigh.getTime());
             
             // La marée précédente est nextTide moins un demi-cycle
@@ -101,24 +102,22 @@ class TideClockCard extends HTMLElement {
             progress = progress / totalDuration;
         }
         
-        // Angle de base (progression 0 à 1) pointant vers le haut (Marée Haute)
-        // L'aiguille commence à 6h (bas, -PI/2 + PI = PI/2) et va vers 12h (haut, -PI/2)
-        let angle = (progress * 2 * Math.PI) - Math.PI / 2;
+        // La position 12h correspond à l'angle -Math.PI / 2
+        // La position 6h correspond à l'angle Math.PI / 2
 
+        let angle;
 
-        // Décaler l'angle si le cycle est HAUTE -> BASSE
-        // Si la prochaine marée est Haute, l'aiguille va de 6h vers 12h. L'angle de base est correct.
         if (isNextTideHigh) {
-            // Le cycle est Basse -> Haute. L'aiguille va de 6h (MB) vers 12h (MH).
-            // Le point de départ (prevTide) doit être 6h (MB), et l'arrivée (nextTide) 12h (MH).
-            // Le progress est 0 à 1 (sur la moitié du cadran).
-            angle = (progress * Math.PI) + Math.PI / 2; // Va de 90° (MB) à 270° (MH, ou -90°).
+            // Cycle: Basse (prevTide) -> Haute (nextTide)
+            // Aiguille va de 6h (Math.PI / 2) à 12h (-Math.PI / 2)
+            // L'angle diminue au fur et à mesure que le temps s'écoule.
+            angle = (Math.PI / 2) - (progress * Math.PI); 
 
         } else {
-            // Le cycle est Haute -> Basse. L'aiguille va de 12h (MH) vers 6h (MB).
-            // Le progress est 0 à 1 (sur l'autre moitié du cadran).
-            // On commence à 12h (-90°) et on progresse vers 6h (90°).
-            angle = (progress * Math.PI) - Math.PI / 2;
+            // Cycle: Haute (prevTide) -> Basse (nextTide)
+            // Aiguille va de 12h (-Math.PI / 2) à 6h (Math.PI / 2)
+            // L'angle augmente au fur et à mesure que le temps s'écoule.
+            angle = (-Math.PI / 2) + (progress * Math.PI);
         }
 
 
