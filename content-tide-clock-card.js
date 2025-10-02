@@ -77,12 +77,22 @@ class TideClockCard extends HTMLElement {
         const isNextTideHigh = nextTideData.isHigh;
         
         // 3. Déterminer la marée précédente (Prev Tide)
-        const prevTide = new Date(nextTide.getTime() - HALF_TIDAL_CYCLE_MS);
+        let prevTide = new Date(nextTide.getTime() - HALF_TIDAL_CYCLE_MS);
+
+        // Correction critique : S'assurer que prevTide est bien la marée passée la plus récente.
+        // Si prevTide est après 'now', c'est que notre cycle est en avance d'un demi-cycle.
+        // (Ex: now=22:04, nextTide=02:47(J+1), prevTide=20:34(J). Si nextTide avait été mal détectée,
+        // ce correctif empêcherait une erreur de logique de cycle.
+        // Si prevTide est trop loin, ajuster.
+        while (prevTide.getTime() > now.getTime()) {
+            prevTide.setTime(prevTide.getTime() - HALF_TIDAL_CYCLE_MS);
+        }
 
         // --- 3. Calcul de la progression et de l'angle ---
         
         const totalDuration = HALF_TIDAL_CYCLE_MS;
-        const elapsed = now.getTime() - prevTide.getTime(); // Temps écoulé depuis la marée précédente (Low)
+        // Le temps écoulé depuis la marée précédente (qui est Low dans ce cas: 20:34:30)
+        const elapsed = now.getTime() - prevTide.getTime(); 
         
         let progress = elapsed / totalDuration;
         progress = Math.min(1, Math.max(0, progress)); // Borner entre 0 et 1
@@ -94,12 +104,11 @@ class TideClockCard extends HTMLElement {
 
         if (isNextTideHigh) {
             // Cycle: Basse -> Haute (Montante). Angle de +PI/2 (Bas) vers -PI/2 (Haut).
-            // Si progress=0 (Basse), angle = PI/2. Si progress=1 (Haute), angle = -PI/2.
+            // progress=0 (Basse): angle = PI/2 (Bas). progress=1 (Haute): angle = -PI/2 (Haut).
             angle = (Math.PI / 2) - (progress * Math.PI); 
-            // Pour 22:04 -> 02:47: progress est faible, angle est proche de PI/2 (Bas), dans le quadrant gauche. Correct.
         } else {
             // Cycle: Haute -> Basse (Descendante). Angle de -PI/2 (Haut) vers +PI/2 (Bas).
-            // Si progress=0 (Haute), angle = -PI/2. Si progress=1 (Basse), angle = PI/2.
+            // progress=0 (Haute): angle = -PI/2 (Haut). progress=1 (Basse): angle = PI/2 (Bas).
             angle = (-Math.PI / 2) + (progress * Math.PI);
         }
         
