@@ -89,32 +89,32 @@ class TideClockCard extends HTMLElement {
         let angle;
 
         // Note: Dans le système de coordonnées Canvas standard, 0 rad est à droite, +PI/2 est en bas, -PI/2 est en haut.
-        // L'axe Y est inversé par rapport aux maths (positif vers le bas).
         
         if (isNextTideHigh) {
             // Marée MONTANTE: Basse (progress=0) -> Haute (progress=1)
-            // L'aiguille doit se déplacer sur le côté GAUCHE.
-            // Départ: Bas (+PI/2). Rotation: Anti-horaire (-PI * progress).
-            angle = (Math.PI / 2) - (progress * Math.PI); 
+            // L'aiguille doit se déplacer sur le côté GAUCHE (anti-horaire).
+            // Le départ est en Bas (+PI/2). L'arrivée est en Haut (-PI/2).
+            // Pour forcer la rotation anti-horaire sur le côté gauche, nous utilisons la formule DESCENDANTE.
+            
+            // FORMULE ORIGINALE: angle = (Math.PI / 2) - (progress * Math.PI); 
+            // NOUVELLE FORMULE (Descendante inversée): 
+            angle = (-Math.PI / 2) + (progress * Math.PI); // Commence en haut, va vers le bas (côté droit)
+            // Pour la forcer sur le côté gauche, nous appliquons une inversion (rotation de 180° + inversion du sens).
+            angle = -angle; // Ceci inverse et la met sur le côté GAUCHE
+            
         } else {
             // Marée DESCENDANTE: Haute (progress=0) -> Basse (progress=1)
-            // L'aiguille doit se déplacer sur le côté DROIT.
-            // Départ: Haut (-PI/2). Rotation: Horaire (+PI * progress).
-            angle = (-Math.PI / 2) + (progress * Math.PI);
+            // L'aiguille doit se déplacer sur le côté DROIT (horaire).
+            // Le départ est en Haut (-PI/2). L'arrivée est en Bas (+PI/2).
+            // Pour forcer la rotation horaire sur le côté droit, nous utilisons la formule MONTANTE.
+
+            // FORMULE ORIGINALE: angle = (-Math.PI / 2) + (progress * Math.PI);
+            // NOUVELLE FORMULE (Montante inversée):
+            angle = (Math.PI / 2) - (progress * Math.PI); // Commence en bas, va vers le haut (côté gauche)
+            // Pour la forcer sur le côté droit, nous appliquons une inversion (rotation de 180° + inversion du sens).
+            angle = -angle; // Ceci inverse et la met sur le côté DROIT
         }
         
-        // C'était la dernière pièce manquante !
-        // L'inversion finale de l'angle était la cause de l'inversion Gauche/Droite vs Haut/Bas.
-        // Pour les marées, nous voulons que l'aiguille se déplace:
-        // Montante (Gauche) : +PI/2 (Bas) -> -PI/2 (Haut)
-        // Descendante (Droite): -PI/2 (Haut) -> +PI/2 (Bas)
-        // La logique ci-dessus fait déjà ceci.
-        // L'inversion finale est nécessaire car l'axe des Y du canvas est inversé (positif vers le bas).
-        // En inversant le signe de l'angle, on corrige le fait que l'aiguille se déplace sur le mauvais
-        // quadrant. Retirer cette inversion devrait corriger le problème.
-        
-        // ANCIEN CODE AVEC INVERSION: angle = -angle; // Ceci était la cause de l'inversion HAUT/BAS
-
         // --- 4. Dessin du Cadran (Aucun changement) ---
         const canvas = this.querySelector('#tideClock');
         if (!canvas) return;
