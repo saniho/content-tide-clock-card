@@ -25,6 +25,7 @@ class TideClockCard extends HTMLElement {
         // --- Logique de calcul des marées ---
         function parseTideTime(timeStr, baseDate = now) {
             const [hours, minutes] = timeStr.split(':').map(Number);
+            // Crée une date pour aujourd'hui avec l'heure spécifiée
             const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes, 0, 0);
             return date;
         }
@@ -32,23 +33,94 @@ class TideClockCard extends HTMLElement {
         let tideHigh = parseTideTime(tideHighRaw);
         let tideLow = parseTideTime(tideLowRaw);
 
-        // Assurer que les marées sont dans le futur
-        if (tideHigh < now) {
-            tideHigh.setDate(tideHigh.getDate() + 1);
+        // Durée exacte d'un demi-cycle lunaire (6h 12m 30s) en millisecondes
+        const HALF_TIDAL_CYCLE_MS = (6 * 60 * 60 * 1000) + (12.5 * 60 * 1000); 
+        const FULL_TIDAL_CYCLE_MS = HALF_TIDAL_CYCLE_MS * 2;
+        
+        // --- 1. Positionnement des marées autour de l'heure actuelle ---
+        
+        // 1a. Normaliser tideHigh: trouver la marée haute la plus proche de l'heure actuelle
+        let currentHigh = new Date(tideHigh.getTime());
+        // Ajuster l'heure de la MH pour qu'elle soit dans la fenêtre de +/- 6h 12m 30s de l'heure actuelle
+        while (currentHigh.getTime() - now.getTime() > HALF_TIDAL_CYCLE_MS) {
+            currentHigh.setTime(currentHigh.getTime() - FULL_TIDAL_CYCLE_MS);
         }
-        if (tideLow < now) {
-            tideLow.setDate(tideLow.getDate() + 1);
+        while (currentHigh.getTime() - now.getTime() < -HALF_TIDAL_CYCLE_MS) {
+            currentHigh.setTime(currentHigh.getTime() + FULL_TIDAL_CYCLE_MS);
         }
 
-        // Déterminer le cycle actuel
-        const nextTide = tideHigh < tideLow ? tideHigh : tideLow;
-        const prevTide = tideHigh < tideLow ? tideLow : tideHigh;
-        prevTide.setDate(prevTide.getDate() - 1);
+        // 1b. Normaliser tideLow: trouver la marée basse la plus proche de l'heure actuelle
+        let currentLow = new Date(tideLow.getTime());
+        // Ajuster l'heure de la MB pour qu'elle soit dans la fenêtre de +/- 6h 12m 30s de l'heure actuelle
+        while (currentLow.getTime() - now.getTime() > HALF_TIDAL_CYCLE_MS) {
+            currentLow.setTime(currentLow.getTime() - FULL_TIDAL_CYCLE_MS);
+        }
+        while (currentLow.getTime() - now.getTime() < -HALF_TIDAL_CYCLE_MS) {
+            currentLow.setTime(currentLow.getTime() + FULL_TIDAL_CYCLE_MS);
+        }
 
-        const totalDuration = nextTide.getTime() - prevTide.getTime();
+        // --- 2. Détermination du cycle précédent et suivant ---
+        
+        let nextTide;
+        let prevTide;
+        let isNextTideHigh;
+
+        // Toutes les marées futures proches
+        const futureTides = [currentHigh, currentLow].filter(t => t.getTime() > now.getTime());
+        
+        if (futureTides.length === 0) {
+            // Toutes les marées sont passées (ex: 23:59 après une marée de 23:30)
+            const lastTide = currentHigh.getTime() > currentLow.getTime() ? currentHigh : currentLow;
+            
+            // Déterminer le type de la prochaine marée: si la dernière était Basse, la prochaine est Haute (et vice-versa)
+            const wasLastTideHigh = (lastTide.getTime() === currentHigh.getTime());
+            isNextTideHigh = !wasLastTideHigh;
+
+            nextTide = new Date(lastTide.getTime() + HALF_TIDAL_CYCLE_MS);
+            prevTide = lastTide;
+            
+        } else {
+            // Trouver la prochaine marée dans le futur
+            nextTide = futureTides.reduce((a, b) => (a.getTime() < b.getTime() ? a : b));
+            isNextTideHigh = (nextTide.getTime() === currentHigh.getTime());
+            
+            // La marée précédente est nextTide moins un demi-cycle
+            prevTide = new Date(nextTide.getTime() - HALF_TIDAL_CYCLE_MS);
+        }
+
+        // --- 3. Calcul de la progression de l'aiguille ---
+        
+        const totalDuration = HALF_TIDAL_CYCLE_MS;
         const elapsed = now.getTime() - prevTide.getTime();
-        const progress = elapsed / totalDuration;
-        const angle = (progress * 2 * Math.PI) - Math.PI / 2;
+        
+        let progress = elapsed / totalDuration;
+        
+        // Sécurité pour s'assurer que progress est entre 0 et 1
+        if (progress < 0 || progress > 1) {
+            progress = ((elapsed % totalDuration) + totalDuration) % totalDuration;
+            progress = progress / totalDuration;
+        }
+        
+        // Angle de base (progression 0 à 1) pointant vers le haut (Marée Haute)
+        // L'aiguille commence à 6h (bas, -PI/2 + PI = PI/2) et va vers 12h (haut, -PI/2)
+        let angle = (progress * 2 * Math.PI) - Math.PI / 2;
+
+
+        // Décaler l'angle si le cycle est HAUTE -> BASSE
+        // Si la prochaine marée est Haute, l'aiguille va de 6h vers 12h. L'angle de base est correct.
+        if (isNextTideHigh) {
+            // Le cycle est Basse -> Haute. L'aiguille va de 6h (MB) vers 12h (MH).
+            // Le point de départ (prevTide) doit être 6h (MB), et l'arrivée (nextTide) 12h (MH).
+            // Le progress est 0 à 1 (sur la moitié du cadran).
+            angle = (progress * Math.PI) + Math.PI / 2; // Va de 90° (MB) à 270° (MH, ou -90°).
+
+        } else {
+            // Le cycle est Haute -> Basse. L'aiguille va de 12h (MH) vers 6h (MB).
+            // Le progress est 0 à 1 (sur l'autre moitié du cadran).
+            // On commence à 12h (-90°) et on progresse vers 6h (90°).
+            angle = (progress * Math.PI) - Math.PI / 2;
+        }
+
 
         const canvas = this.querySelector('#tideClock');
         if (!canvas) return;
@@ -115,7 +187,6 @@ class TideClockCard extends HTMLElement {
         ctx.fillText("MARÉE HAUTE", centerX, hauteYText);
         
         // --- 4b. Marée Basse (Bas, position 6h) - Texte centré ---
-        // Position X du texte Marée Basse (symétrique à la Marée Haute)
         const basseYText = centerY + radius - 40; // Symétrique à hauteYText
         ctx.fillText("MARÉE BASSE", centerX, basseYText); 
 
@@ -154,7 +225,7 @@ class TideClockCard extends HTMLElement {
         const textColor = '#000000'; // Noir pour le contraste
 
         // --- 7a. Marée Haute (Heure AU-DESSUS du texte) ---
-        const hauteYBox = centerY - radius + 5; // Boîte (position Y inchangée : très haut)
+        const hauteYBox = centerY - radius + 5; 
         ctx.fillStyle = '#FFFFFF'; // Fond blanc
         ctx.fillRect(centerX - boxWidth / 2, hauteYBox, boxWidth, boxHeight);
         ctx.font = fontHour;
@@ -163,8 +234,8 @@ class TideClockCard extends HTMLElement {
         ctx.fillText(tideHighRaw, centerX, hauteYBox + 13);
 
         // --- 7b. Marée Basse (Heure EN-DESSOUS du texte) ---
-        // Boîte placée SOUS le texte "MARÉE BASSE", en utilisant la même logique d'espacement que pour la Marée Haute.
-        const basseYBox = basseYText + 5; // 5 pixels sous le texte basseYText (pour que la boîte commence juste après)
+        // Boîte placée SOUS le texte "MARÉE BASSE"
+        const basseYBox = basseYText + 5; 
         
         ctx.fillStyle = '#FFFFFF'; // Fond blanc
         ctx.fillRect(centerX - boxWidth / 2, basseYBox, boxWidth, boxHeight); 
