@@ -88,26 +88,32 @@ class TideClockCard extends HTMLElement {
 
         let angle;
 
-        // La marée commence toujours à une position (Haute ou Basse) et se déplace sur un demi-cercle (PI radians).
-        // L'angle 0 (horizontal, droite) ne correspond à aucune marée, nous utilisons donc les angles verticaux (+PI/2 et -PI/2) comme points de départ.
+        // Note: Dans le système de coordonnées Canvas standard, 0 rad est à droite, +PI/2 est en bas, -PI/2 est en haut.
+        // L'axe Y est inversé par rapport aux maths (positif vers le bas).
         
         if (isNextTideHigh) {
-            // Cycle: Basse (progress=0, angle=+PI/2) -> Haute (progress=1, angle=-PI/2). Montante, rotation anti-horaire.
-            // La marée est MONTANTE. Elle doit se déplacer sur le côté GAUCHE (anti-horaire).
-            // Le point de départ est +PI/2 (Bas), la rotation est -PI * progress.
+            // Marée MONTANTE: Basse (progress=0) -> Haute (progress=1)
+            // L'aiguille doit se déplacer sur le côté GAUCHE.
+            // Départ: Bas (+PI/2). Rotation: Anti-horaire (-PI * progress).
             angle = (Math.PI / 2) - (progress * Math.PI); 
         } else {
-            // Cycle: Haute (progress=0, angle=-PI/2) -> Basse (progress=1, angle=+PI/2). Descendante, rotation horaire.
-            // La marée est DESCENDANTE. Elle doit se déplacer sur le côté DROIT (horaire).
-            // Le point de départ est -PI/2 (Haut), la rotation est +PI * progress.
+            // Marée DESCENDANTE: Haute (progress=0) -> Basse (progress=1)
+            // L'aiguille doit se déplacer sur le côté DROIT.
+            // Départ: Haut (-PI/2). Rotation: Horaire (+PI * progress).
             angle = (-Math.PI / 2) + (progress * Math.PI);
         }
         
-        // La convention de dessin par défaut de ctx.lineTo est inversée par rapport à l'horloge
-        // des marées (qui se déplace généralement dans le sens horaire/anti-horaire selon le côté).
-        // L'inversion de l'axe Y pour la logique d'un cadran d'horloge classique est nécessaire ici.
-        // Nous inversons simplement le signe de l'angle final pour basculer de l'autre côté du cadran.
-        angle = -angle;
+        // C'était la dernière pièce manquante !
+        // L'inversion finale de l'angle était la cause de l'inversion Gauche/Droite vs Haut/Bas.
+        // Pour les marées, nous voulons que l'aiguille se déplace:
+        // Montante (Gauche) : +PI/2 (Bas) -> -PI/2 (Haut)
+        // Descendante (Droite): -PI/2 (Haut) -> +PI/2 (Bas)
+        // La logique ci-dessus fait déjà ceci.
+        // L'inversion finale est nécessaire car l'axe des Y du canvas est inversé (positif vers le bas).
+        // En inversant le signe de l'angle, on corrige le fait que l'aiguille se déplace sur le mauvais
+        // quadrant. Retirer cette inversion devrait corriger le problème.
+        
+        // ANCIEN CODE AVEC INVERSION: angle = -angle; // Ceci était la cause de l'inversion HAUT/BAS
 
         // --- 4. Dessin du Cadran (Aucun changement) ---
         const canvas = this.querySelector('#tideClock');
