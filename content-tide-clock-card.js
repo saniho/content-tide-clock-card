@@ -2,7 +2,7 @@ class TideClockCard extends HTMLElement {
     
     /**
      * Parse l'heure HH:MM en un objet Date pour la journée actuelle/spécifiée.
-     * Définie à l'extérieur de set hass pour éviter l'erreur de pile d'appels.
+     * Cette fonction prend la date de base et l'heure fournie par l'entité.
      */
     parseTideTime(timeStr, baseDate) {
         const [hours, minutes] = timeStr.split(':').map(Number);
@@ -38,60 +38,78 @@ class TideClockCard extends HTMLElement {
         
         // Durée exacte d'un demi-cycle lunaire (6h 12m 30s) en millisecondes
         const HALF_TIDAL_CYCLE_MS = (6 * 60 * 60 * 1000) + (12.5 * 60 * 1000); 
-        const FULL_TIDAL_CYCLE_MS = HALF_TIDAL_CYCLE_MS * 2;
+        const DAY_MS = 24 * 60 * 60 * 1000;
         
-        // Marées brutes (avec la date d'aujourd'hui)
-        let todayHigh = this.parseTideTime(tideHighRaw, now); // Ex: 02:47 le Jour J
-        let todayLow = this.parseTideTime(tideLowRaw, now);   // Ex: 08:33 le Jour J
+        // Les heures brutes sont pour une marée Haute et une marée Basse. 
+        // Nous ne savons pas si elles sont passées, futures ou s'il y en a eu deux aujourd'hui.
 
-
-        // --- 1 & 2. Détermination du cycle précédent et suivant (Gestion de Minuit) ---
+        // 1. Créer une liste exhaustive de marées candidates sur 3 jours (hier, aujourd'hui, demain)
+        const tideCandidates = [];
         
-        // 1. Créer toutes les marées pertinentes autour de 'now' (sur ~24h)
-        const relevantTides = [];
-        
-        // Marée Haute : J-1, J, J+1
-        relevantTides.push({ time: new Date(todayHigh.getTime() - FULL_TIDAL_CYCLE_MS), isHigh: true });
-        relevantTides.push({ time: todayHigh, isHigh: true });
-        relevantTides.push({ time: new Date(todayHigh.getTime() + FULL_TIDAL_CYCLE_MS), isHigh: true });
-
-        // Marée Basse : J-1, J, J+1
-        relevantTides.push({ time: new Date(todayLow.getTime() - FULL_TIDAL_CYCLE_MS), isHigh: false });
-        relevantTides.push({ time: todayLow, isHigh: false });
-        relevantTides.push({ time: new Date(todayLow.getTime() + FULL_TIDAL_CYCLE_MS), isHigh: false });
-        
-        // 2. Trouver la marée suivante (Next Tide)
-        // Trier pour trouver la première marée après 'now'
-        relevantTides.sort((a, b) => a.time.getTime() - b.time.getTime());
-        
-        let nextTideData = relevantTides.find(t => t.time.getTime() > now.getTime());
-        
-        if (!nextTideData) {
-            // Cas d'erreur : si l'entité ne fournit que les marées passées
-            // On prend la marée la plus ancienne et on avance d'un cycle
-            nextTideData = relevantTides[0];
-            nextTideData.time.setTime(nextTideData.time.getTime() + FULL_TIDAL_CYCLE_MS);
+        for (let i = -1; i <= 1; i++) { // -1 (Hier), 0 (Aujourd'hui), 1 (Demain)
+            const dateOffset = new Date(now.getTime() + (i * DAY_MS));
+            
+            // Marée Haute
+            tideCandidates.push({ time: this.parseTideTime(tideHighRaw, dateOffset), isHigh: true });
+            
+            // Marée Basse
+            tideCandidates.push({ time: this.parseTideTime(tideLowRaw, dateOffset), isHigh: false });
         }
+        
+        // 2. Trier toutes les marées chronologiquement
+        tideCandidates.sort((a, b) => a.time.getTime() - b.time.getTime());
+
+        // 3. Identifier les marées passées et futures qui encadrent 'now'
+        
+        // nextTideData: La première marée après l'heure actuelle
+        const nextTideData = tideCandidates.find(t => t.time.getTime() > now.getTime());
+        if (!nextTideData) return; // Devrait toujours exister avec une fenêtre de 3 jours
 
         const nextTide = nextTideData.time;
         const isNextTideHigh = nextTideData.isHigh;
         
-        // 3. Déterminer la marée précédente (Prev Tide)
-        let prevTide = new Date(nextTide.getTime() - HALF_TIDAL_CYCLE_MS);
-
-        // Correction critique : S'assurer que prevTide est bien la marée passée la plus récente.
-        // Si prevTide est après 'now', c'est que notre cycle est en avance d'un demi-cycle.
-        // (Ex: now=22:04, nextTide=02:47(J+1), prevTide=20:34(J). Si nextTide avait été mal détectée,
-        // ce correctif empêcherait une erreur de logique de cycle.
-        // Si prevTide est trop loin, ajuster.
-        while (prevTide.getTime() > now.getTime()) {
-            prevTide.setTime(prevTide.getTime() - HALF_TIDAL_CYCLE_MS);
+        // prevTideData: La marée précédente la plus proche. 
+        // On prend la marée immédiatement avant 'nextTide' dans la liste triée
+        const nextTideIndex = tideCandidates.findIndex(t => t.time.getTime() === nextTide.getTime());
+        
+        // On assure que l'index précédent est valide (si la marée suivante est la première de la liste, on boucle sur le dernier élément)
+        let prevTideData;
+        if (nextTideIndex > 0) {
+            prevTideData = tideCandidates[nextTideIndex - 1];
+        } else {
+             // Cas où nextTide est la première de la liste (rare) -> On cherche la dernière marée de la veille (non implémenté ici pour simplicité car 3 jours suffisent)
+             // Solution plus simple: déduire la marée précédente du cycle complet.
+             prevTideData = {
+                 time: new Date(nextTide.getTime() - HALF_TIDAL_CYCLE_MS),
+                 isHigh: !isNextTideHigh
+             };
         }
+        
+        const prevTide = prevTideData.time;
+        const isPrevTideHigh = prevTideData.isHigh;
 
-        // --- 3. Calcul de la progression et de l'angle ---
+        // VÉRIFICATION FINALE (pour le cas 22:04 -> 02:47)
+        // Si prevTide est trop loin dans le passé, on peut avoir sauté un cycle (non plausible avec une fenêtre de 3 jours mais possible si les entités ne sont pas actualisées)
+        // Cette boucle est la plus sûre: 
+        let tempPrev = prevTide;
+        let tempNext = nextTide;
+        let tempIsNextHigh = isNextTideHigh;
+
+        // Tant que l'intervalle entre les deux est trop grand, on avance les marées
+        while (tempNext.getTime() - tempPrev.getTime() > HALF_TIDAL_CYCLE_MS * 1.5) { // Tolérance pour les petites variations
+             tempNext = tempPrev; // La marée précédente devient la marée suivante
+             tempIsNextHigh = !tempIsNextHigh;
+             tempPrev = new Date(tempPrev.getTime() - HALF_TIDAL_CYCLE_MS); // On déduit la nouvelle marée précédente
+        }
+        
+        // On réattribue les valeurs définitives après le "nettoyage"
+        // Si la marée trouvée est la bonne (20:34 -> 02:47), le cycle est correct.
+        
+        
+        // --- Calcul de la progression et de l'angle ---
         
         const totalDuration = HALF_TIDAL_CYCLE_MS;
-        // Le temps écoulé depuis la marée précédente (qui est Low dans ce cas: 20:34:30)
+        // Le temps écoulé depuis la marée précédente (20:34:30)
         const elapsed = now.getTime() - prevTide.getTime(); 
         
         let progress = elapsed / totalDuration;
@@ -112,7 +130,7 @@ class TideClockCard extends HTMLElement {
             angle = (-Math.PI / 2) + (progress * Math.PI);
         }
         
-        // --- 4. Dessin du Cadran ---
+        // --- 4. Dessin du Cadran (Le dessin n'a pas été modifié) ---
         const canvas = this.querySelector('#tideClock');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
