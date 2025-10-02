@@ -87,7 +87,6 @@ class TideClockCard extends HTMLElement {
             nextTide = new Date(prevTide.getTime() + HALF_TIDAL_CYCLE_MS);
             
             // Déterminer si la prochaine marée est une marée haute ou une marée basse (pour l'angle)
-            // On doit vérifier si nextTide correspond à la marée haute normalisée ou la marée basse normalisée
             
             // Comme prevTide est la plus récente passée, si elle était basse, la prochaine est haute.
             const wasPrevTideHigh = (Math.abs(prevTide.getTime() - currentHigh.getTime()) < 1000); // 1s tolerance
@@ -108,10 +107,10 @@ class TideClockCard extends HTMLElement {
         let angle;
 
         if (isNextTideHigh) {
-            // Cycle: Basse -> Haute (de +PI/2 vers -PI/2). L'angle diminue (sens anti-horaire sur la moitié inférieure).
+            // Cycle: Basse -> Haute (de +PI/2 vers -PI/2). L'angle diminue (sens anti-horaire).
             angle = (Math.PI / 2) - (progress * Math.PI); 
         } else {
-            // Cycle: Haute -> Basse (de -PI/2 vers +PI/2). L'angle augmente (sens horaire sur la moitié supérieure).
+            // Cycle: Haute -> Basse (de -PI/2 vers +PI/2). L'angle augmente (sens horaire).
             angle = (-Math.PI / 2) + (progress * Math.PI);
         }
         
@@ -149,7 +148,7 @@ class TideClockCard extends HTMLElement {
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Points et Chiffres (Symétrie 5 à 1)
+        // Points et Chiffres (Heures restantes)
         ctx.font = 'bold 16px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FFFFFF';
@@ -159,10 +158,25 @@ class TideClockCard extends HTMLElement {
             const currentAngle = (i * Math.PI / 6) - Math.PI / 2;
             
             let label = '';
-            // 5, 4, 3, 2, 1 dans le sens de rotation de la marée montante (anti-horaire)
-            if (i >= 1 && i <= 5) label = (6 - i).toString(); // Position 1 à 5
-            // 1, 2, 3, 4, 5 dans le sens de rotation de la marée descendante (horaire)
-            if (i >= 7 && i <= 11) label = (i - 6).toString(); // Position 7 à 11
+            
+            // Côté gauche (indices 1 à 5)
+            if (i >= 1 && i <= 5) {
+                 // Montée (anti-horaire): 5, 4, 3, 2, 1 (i=1 est 5h restantes, i=5 est 1h restante)
+                 label = (6 - i).toString();
+            } 
+            // Côté droit (indices 7 à 11)
+            else if (i >= 7 && i <= 11) {
+                 // Descente (horaire): 5, 4, 3, 2, 1 (i=7 est 1h restante, i=11 est 5h restantes)
+                 // Correction: Nous inversons l'ordre de calcul pour que 7=5, 8=4, etc.
+                 // i=7 -> (12 - 7) = 5
+                 // i=11 -> (12 - 11) = 1 (FAUX, doit être 5)
+                 
+                 // L'ordre correct est (12 - i) pour i=7 -> 5, i=8 -> 4... i=11 -> 1.
+                 // POUR OBTENIR 5, 4, 3, 2, 1 :
+                 // i=7 doit donner 5.
+                 // i=11 doit donner 1.
+                 label = (12 - i).toString(); 
+            }
             
             if (label) {
                 const x = centerX + markerRadius * Math.cos(currentAngle);
@@ -170,7 +184,6 @@ class TideClockCard extends HTMLElement {
                 ctx.fillText(label, x, y + 5);
             }
         }
-        // NOTE: Les labels 5,4,3,2,1 doivent être dans le sens anti-horaire, donc de l'angle 90° vers l'angle 0.
 
         // Texte de Marée (Haut et Bas)
         ctx.font = 'bold 12px sans-serif';
