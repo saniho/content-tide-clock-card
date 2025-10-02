@@ -48,6 +48,7 @@ class TideClockCard extends HTMLElement {
         
         // 1a. Normaliser tideHigh: trouver la marée haute la plus proche de l'heure actuelle
         let currentHigh = new Date(tideHigh.getTime());
+        // Ajuster High pour qu'elle soit dans un rayon d'un demi-cycle autour de 'now'
         while (currentHigh.getTime() - now.getTime() > HALF_TIDAL_CYCLE_MS) {
             currentHigh.setTime(currentHigh.getTime() - FULL_TIDAL_CYCLE_MS);
         }
@@ -57,6 +58,7 @@ class TideClockCard extends HTMLElement {
 
         // 1b. Normaliser tideLow: trouver la marée basse la plus proche de l'heure actuelle
         let currentLow = new Date(tideLow.getTime());
+        // Ajuster Low pour qu'elle soit dans un rayon d'un demi-cycle autour de 'now'
         while (currentLow.getTime() - now.getTime() > HALF_TIDAL_CYCLE_MS) {
             currentLow.setTime(currentLow.getTime() - FULL_TIDAL_CYCLE_MS);
         }
@@ -69,29 +71,39 @@ class TideClockCard extends HTMLElement {
         let prevTide;
         let isNextTideHigh;
 
-        // Trouver la marée la plus récente qui est PASSÉE
-        const pastTides = [currentHigh, currentLow].filter(t => t.getTime() <= now.getTime());
+        // On crée un tableau de deux marées potentielles (une haute, une basse) proches de 'now'.
+        let possibleNextTides = [];
         
-        if (pastTides.length === 0) {
-            // Si aucune marée n'est passée (très peu probable si les marées sont normalisées), prenons la plus éloignée dans le futur et reculons.
-            const futureTide = [currentHigh, currentLow].reduce((a, b) => (a.getTime() < b.getTime() ? a : b));
-            nextTide = futureTide;
-            prevTide = new Date(futureTide.getTime() - HALF_TIDAL_CYCLE_MS);
-            isNextTideHigh = (nextTide.getTime() === currentHigh.getTime());
-            
-        } else {
-            // La marée précédente est la plus récente dans le passé
-            prevTide = pastTides.reduce((a, b) => (a.getTime() > b.getTime() ? a : b));
-            
-            // La marée suivante est un demi-cycle après la précédente
-            nextTide = new Date(prevTide.getTime() + HALF_TIDAL_CYCLE_MS);
-            
-            // Déterminer si la prochaine marée est une marée haute ou une marée basse (pour l'angle)
-            
-            // Comme prevTide est la plus récente passée, si elle était basse, la prochaine est haute.
-            const wasPrevTideHigh = (Math.abs(prevTide.getTime() - currentHigh.getTime()) < 1000); // 1s tolerance
-            isNextTideHigh = !wasPrevTideHigh; 
+        // La marée suivante est la première après 'now'.
+        let nextHigh = new Date(currentHigh.getTime());
+        let nextLow = new Date(currentLow.getTime());
+
+        // Si la marée haute normalisée est passée, on passe au cycle suivant
+        if (nextHigh.getTime() <= now.getTime()) {
+             nextHigh.setTime(nextHigh.getTime() + FULL_TIDAL_CYCLE_MS);
         }
+        // Si la marée basse normalisée est passée, on passe au cycle suivant
+        if (nextLow.getTime() <= now.getTime()) {
+             nextLow.setTime(nextLow.getTime() + FULL_TIDAL_CYCLE_MS);
+        }
+
+        possibleNextTides.push({ time: nextHigh, isHigh: true });
+        possibleNextTides.push({ time: nextLow, isHigh: false });
+        
+        // Trouver la marée la plus proche dans le futur
+        possibleNextTides.sort((a, b) => a.time.getTime() - b.time.getTime());
+
+        nextTide = possibleNextTides[0].time;
+        isNextTideHigh = possibleNextTides[0].isHigh;
+        
+        // La marée précédente est un demi-cycle avant la marée suivante.
+        prevTide = new Date(nextTide.getTime() - HALF_TIDAL_CYCLE_MS);
+
+        // Debugging aide:
+        // console.log("Now:", now.toLocaleTimeString());
+        // console.log("Prev Tide:", prevTide.toLocaleTimeString(), isNextTideHigh ? "Low" : "High");
+        // console.log("Next Tide:", nextTide.toLocaleTimeString(), isNextTideHigh ? "High" : "Low");
+
 
         // --- 3. Calcul de la progression et de l'angle ---
         
@@ -108,9 +120,11 @@ class TideClockCard extends HTMLElement {
 
         if (isNextTideHigh) {
             // Cycle: Basse -> Haute (de +PI/2 vers -PI/2). L'angle diminue (sens anti-horaire).
+            // L'aiguille se déplace vers le haut et la gauche (Marée Montante)
             angle = (Math.PI / 2) - (progress * Math.PI); 
         } else {
             // Cycle: Haute -> Basse (de -PI/2 vers +PI/2). L'angle augmente (sens horaire).
+            // L'aiguille se déplace vers le bas et la droite (Marée Descendante)
             angle = (-Math.PI / 2) + (progress * Math.PI);
         }
         
@@ -166,15 +180,8 @@ class TideClockCard extends HTMLElement {
             } 
             // Côté droit (indices 7 à 11)
             else if (i >= 7 && i <= 11) {
-                 // Descente (horaire): 5, 4, 3, 2, 1 (i=7 est 1h restante, i=11 est 5h restantes)
-                 // Correction: Nous inversons l'ordre de calcul pour que 7=5, 8=4, etc.
-                 // i=7 -> (12 - 7) = 5
-                 // i=11 -> (12 - 11) = 1 (FAUX, doit être 5)
-                 
-                 // L'ordre correct est (12 - i) pour i=7 -> 5, i=8 -> 4... i=11 -> 1.
-                 // POUR OBTENIR 5, 4, 3, 2, 1 :
-                 // i=7 doit donner 5.
-                 // i=11 doit donner 1.
+                 // Descente (horaire): 5, 4, 3, 2, 1 (i=7 est 5h restantes, i=11 est 1h restante)
+                 // Le calcul des heures restantes est symétrique
                  label = (12 - i).toString(); 
             }
             
