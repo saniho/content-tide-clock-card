@@ -1,15 +1,15 @@
 class TideClockCard extends HTMLElement {
     // Variable pour stocker l'ID de l'intervalle de rafraîchissement
     updateInterval = null; 
+    // Flag pour s'assurer que le premier dessin est fait rapidement
+    isInitialDrawDone = false;
     
     /**
      * Parse l'heure HH:MM en un objet Date pour la journée actuelle/spécifiée.
-     * Cette fonction est maintenant une méthode de la classe, résolvant le RangeError.
      */
     parseTideTime(timeStr, baseDate) {
-        // baseDate est passée en argument, et non plus 'now' par défaut
+        // baseDate est passée en argument
         const [hours, minutes] = timeStr.split(':').map(Number);
-        // Utilise baseDate (qui sera 'now' dans updateTideClock)
         const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes, 0, 0);
         return date;
     }
@@ -27,7 +27,9 @@ class TideClockCard extends HTMLElement {
         
         // Nettoyer l'intervalle précédent si la configuration change
         this.cleanup();
+        
         // Démarrer le rafraîchissement automatique de l'aiguille toutes les 60 secondes
+        // Le setInterval est la seule source de mise à jour périodique.
         this.updateInterval = setInterval(() => this.updateTideClock(), 60000); 
     }
     
@@ -43,11 +45,20 @@ class TideClockCard extends HTMLElement {
         }
     }
 
+    /**
+     * Le setter HASS est appelé lorsqu'une entité change.
+     * NE DOIT PAS APPELER updateTideClock directement pour éviter le RangeError.
+     * Il se contente de stocker l'état et de déclencher le premier dessin si nécessaire.
+     */
     set hass(hass) {
-        // Stocke l'état de Home Assistant pour la fonction updateTideClock
         this.hass = hass; 
-        // Dessine la carte initialement ou lors de la mise à jour des entités
-        this.updateTideClock(); 
+        
+        // Déclenche le premier dessin immédiatement après avoir reçu les données HASS
+        // Ceci est essentiel car HASS ne rappellera pas set hass(hass) si on ne le lui demande pas.
+        if (!this.isInitialDrawDone) {
+            this.updateTideClock(); 
+            this.isInitialDrawDone = true;
+        }
     }
 
     updateTideClock() {
