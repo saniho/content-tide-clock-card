@@ -69,26 +69,29 @@ class TideClockCard extends HTMLElement {
         let prevTide;
         let isNextTideHigh;
 
-        // Toutes les marées futures proches
-        const futureTides = [currentHigh, currentLow].filter(t => t.getTime() > now.getTime());
+        // Trouver la marée la plus récente qui est PASSÉE
+        const pastTides = [currentHigh, currentLow].filter(t => t.getTime() <= now.getTime());
         
-        if (futureTides.length === 0) {
-            // Cas où les deux marées normalisées sont dans le passé, on prend la plus récente et on projette la suivante
-            const lastTide = currentHigh.getTime() > currentLow.getTime() ? currentHigh : currentLow;
-            
-            const wasLastTideHigh = (lastTide.getTime() === currentHigh.getTime());
-            isNextTideHigh = !wasLastTideHigh;
-
-            nextTide = new Date(lastTide.getTime() + HALF_TIDAL_CYCLE_MS);
-            prevTide = lastTide;
-            
-        } else {
-            // Trouver la prochaine marée dans le futur
-            nextTide = futureTides.reduce((a, b) => (a.getTime() < b.getTime() ? a : b));
+        if (pastTides.length === 0) {
+            // Si aucune marée n'est passée (très peu probable si les marées sont normalisées), prenons la plus éloignée dans le futur et reculons.
+            const futureTide = [currentHigh, currentLow].reduce((a, b) => (a.getTime() < b.getTime() ? a : b));
+            nextTide = futureTide;
+            prevTide = new Date(futureTide.getTime() - HALF_TIDAL_CYCLE_MS);
             isNextTideHigh = (nextTide.getTime() === currentHigh.getTime());
             
-            // La marée précédente est nextTide moins un demi-cycle
-            prevTide = new Date(nextTide.getTime() - HALF_TIDAL_CYCLE_MS);
+        } else {
+            // La marée précédente est la plus récente dans le passé
+            prevTide = pastTides.reduce((a, b) => (a.getTime() > b.getTime() ? a : b));
+            
+            // La marée suivante est un demi-cycle après la précédente
+            nextTide = new Date(prevTide.getTime() + HALF_TIDAL_CYCLE_MS);
+            
+            // Déterminer si la prochaine marée est une marée haute ou une marée basse (pour l'angle)
+            // On doit vérifier si nextTide correspond à la marée haute normalisée ou la marée basse normalisée
+            
+            // Comme prevTide est la plus récente passée, si elle était basse, la prochaine est haute.
+            const wasPrevTideHigh = (Math.abs(prevTide.getTime() - currentHigh.getTime()) < 1000); // 1s tolerance
+            isNextTideHigh = !wasPrevTideHigh; 
         }
 
         // --- 3. Calcul de la progression et de l'angle ---
@@ -105,14 +108,14 @@ class TideClockCard extends HTMLElement {
         let angle;
 
         if (isNextTideHigh) {
-            // Cycle: Basse -> Haute (de Math.PI / 2 vers -Math.PI / 2). L'angle diminue.
+            // Cycle: Basse -> Haute (de +PI/2 vers -PI/2). L'angle diminue (sens anti-horaire sur la moitié inférieure).
             angle = (Math.PI / 2) - (progress * Math.PI); 
         } else {
-            // Cycle: Haute -> Basse (de -Math.PI / 2 vers Math.PI / 2). L'angle augmente.
+            // Cycle: Haute -> Basse (de -PI/2 vers +PI/2). L'angle augmente (sens horaire sur la moitié supérieure).
             angle = (-Math.PI / 2) + (progress * Math.PI);
         }
         
-        // --- 4. Dessin du Cadran (Identique au script fourni) ---
+        // --- 4. Dessin du Cadran ---
         const canvas = this.querySelector('#tideClock');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -156,8 +159,10 @@ class TideClockCard extends HTMLElement {
             const currentAngle = (i * Math.PI / 6) - Math.PI / 2;
             
             let label = '';
-            if (i >= 1 && i <= 5) label = (6 - i).toString();
-            if (i >= 7 && i <= 11) label = (12 - i).toString();
+            // 5, 4, 3, 2, 1 dans le sens de rotation de la marée montante (anti-horaire)
+            if (i >= 1 && i <= 5) label = (6 - i).toString(); // Position 1 à 5
+            // 1, 2, 3, 4, 5 dans le sens de rotation de la marée descendante (horaire)
+            if (i >= 7 && i <= 11) label = (i - 6).toString(); // Position 7 à 11
             
             if (label) {
                 const x = centerX + markerRadius * Math.cos(currentAngle);
@@ -165,6 +170,7 @@ class TideClockCard extends HTMLElement {
                 ctx.fillText(label, x, y + 5);
             }
         }
+        // NOTE: Les labels 5,4,3,2,1 doivent être dans le sens anti-horaire, donc de l'angle 90° vers l'angle 0.
 
         // Texte de Marée (Haut et Bas)
         ctx.font = 'bold 12px sans-serif';
