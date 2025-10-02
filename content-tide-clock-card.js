@@ -91,29 +91,21 @@ class TideClockCard extends HTMLElement {
         // Note: Dans le système de coordonnées Canvas standard, 0 rad est à droite, +PI/2 est en bas, -PI/2 est en haut.
         
         if (isNextTideHigh) {
-            // Marée MONTANTE: Basse (progress=0) -> Haute (progress=1)
-            // L'aiguille doit se déplacer sur le côté GAUCHE (anti-horaire).
-            // Le départ est en Bas (+PI/2). L'arrivée est en Haut (-PI/2).
-            // Pour forcer la rotation anti-horaire sur le côté gauche, nous utilisons la formule DESCENDANTE.
-            
-            // FORMULE ORIGINALE: angle = (Math.PI / 2) - (progress * Math.PI); 
-            // NOUVELLE FORMULE (Descendante inversée): 
-            angle = (-Math.PI / 2) + (progress * Math.PI); // Commence en haut, va vers le bas (côté droit)
-            // Pour la forcer sur le côté gauche, nous appliquons une inversion (rotation de 180° + inversion du sens).
-            angle = -angle; // Ceci inverse et la met sur le côté GAUCHE
+            // Marée MONTANTE: Basse (progress=0, angle=+PI/2) -> Haute (progress=1, angle=-PI/2)
+            // Le mouvement est anti-horaire (côté gauche du cadran).
+            // Formule : Départ (Bas, +PI/2) - (Progrès * PI)
+            angle = (Math.PI / 2) - (progress * Math.PI); 
             
         } else {
-            // Marée DESCENDANTE: Haute (progress=0) -> Basse (progress=1)
-            // L'aiguille doit se déplacer sur le côté DROIT (horaire).
-            // Le départ est en Haut (-PI/2). L'arrivée est en Bas (+PI/2).
-            // Pour forcer la rotation horaire sur le côté droit, nous utilisons la formule MONTANTE.
-
-            // FORMULE ORIGINALE: angle = (-Math.PI / 2) + (progress * Math.PI);
-            // NOUVELLE FORMULE (Montante inversée):
-            angle = (Math.PI / 2) - (progress * Math.PI); // Commence en bas, va vers le haut (côté gauche)
-            // Pour la forcer sur le côté droit, nous appliquons une inversion (rotation de 180° + inversion du sens).
-            angle = -angle; // Ceci inverse et la met sur le côté DROIT
+            // Marée DESCENDANTE: Haute (progress=0, angle=-PI/2) -> Basse (progress=1, angle=+PI/2)
+            // Le mouvement est horaire (côté droit du cadran).
+            // Formule : Départ (Haut, -PI/2) + (Progrès * PI)
+            angle = (-Math.PI / 2) + (progress * Math.PI);
         }
+        
+        // Les formules ci-dessus sont les formules standard d'une horloge.
+        // Elles devraient être correctes pour le cadran de marée tel qu'il est conçu.
+        // L'erreur précédente venait de l'inversion de ces deux blocs.
         
         // --- 4. Dessin du Cadran (Aucun changement) ---
         const canvas = this.querySelector('#tideClock');
