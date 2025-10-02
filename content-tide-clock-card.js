@@ -88,18 +88,27 @@ class TideClockCard extends HTMLElement {
 
         let angle;
 
+        // La marée commence toujours à une position (Haute ou Basse) et se déplace sur un demi-cercle (PI radians).
+        // L'angle 0 (horizontal, droite) ne correspond à aucune marée, nous utilisons donc les angles verticaux (+PI/2 et -PI/2) comme points de départ.
+        
         if (isNextTideHigh) {
-            // Cycle: Basse -> Haute (Montante). progress 0 -> 1. Angle +PI/2 (Bas) -> -PI/2 (Haut).
-            // Le sens de rotation est INVERSE au sens horaire (Montée).
-            // On inverse l'angle pour forcer la rotation sur le côté GAUCHE.
-            angle = -((Math.PI / 2) - (progress * Math.PI)); 
+            // Cycle: Basse (progress=0, angle=+PI/2) -> Haute (progress=1, angle=-PI/2). Montante, rotation anti-horaire.
+            // La marée est MONTANTE. Elle doit se déplacer sur le côté GAUCHE (anti-horaire).
+            // Le point de départ est +PI/2 (Bas), la rotation est -PI * progress.
+            angle = (Math.PI / 2) - (progress * Math.PI); 
         } else {
-            // Cycle: Haute -> Basse (Descendante). progress 0 -> 1. Angle -PI/2 (Haut) -> +PI/2 (Bas).
-            // Le sens de rotation est DANS le sens horaire (Descente).
-            // On inverse l'angle pour forcer la rotation sur le côté DROIT.
-            angle = -((-Math.PI / 2) + (progress * Math.PI));
+            // Cycle: Haute (progress=0, angle=-PI/2) -> Basse (progress=1, angle=+PI/2). Descendante, rotation horaire.
+            // La marée est DESCENDANTE. Elle doit se déplacer sur le côté DROIT (horaire).
+            // Le point de départ est -PI/2 (Haut), la rotation est +PI * progress.
+            angle = (-Math.PI / 2) + (progress * Math.PI);
         }
         
+        // La convention de dessin par défaut de ctx.lineTo est inversée par rapport à l'horloge
+        // des marées (qui se déplace généralement dans le sens horaire/anti-horaire selon le côté).
+        // L'inversion de l'axe Y pour la logique d'un cadran d'horloge classique est nécessaire ici.
+        // Nous inversons simplement le signe de l'angle final pour basculer de l'autre côté du cadran.
+        angle = -angle;
+
         // --- 4. Dessin du Cadran (Aucun changement) ---
         const canvas = this.querySelector('#tideClock');
         if (!canvas) return;
