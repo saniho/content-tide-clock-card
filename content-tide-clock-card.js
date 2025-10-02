@@ -64,17 +64,6 @@ class TideClockCard extends HTMLElement {
         let prevTide = new Date(nextTide.getTime() - HALF_TIDAL_CYCLE_MS);
         
         // 2c. Assurer que (prevTide) est la plus proche marée passée
-        // Si la 'prevTide' déduite est encore AVANT la marée actuelle, cela signifie que
-        // la marée suivante (nextTide) détectée est en fait la DEUXIÈME prochaine marée.
-        // Il faut alors revenir en arrière d'un cycle.
-        // Exemple: now=08:00. nextTide=08:33. prevTide=02:20. C'est le bon cycle.
-        // Exemple: now=22:04. nextTide=02:47(J+1). prevTide=20:34(J). C'est le bon cycle.
-        
-        // Si le temps écoulé entre prevTide et now est supérieur à un cycle (ce qui est le cas
-        // si nous avons sauté une marée), nous avançons le cycle pour nous ramener à la marée
-        // suivante la plus proche.
-        // Tant que prevTide est TROP LOIN (intervalle entre prevTide et now est trop grand)
-        // ou si prevTide est encore dans le futur (logiquement impossible ici, mais sécurité)
         
         // Tant que la marée précédente déduite est antérieure à now par plus d'un demi-cycle:
         // (La différence est très petite, on utilise une tolérance)
@@ -101,10 +90,14 @@ class TideClockCard extends HTMLElement {
 
         if (isNextTideHigh) {
             // Cycle: Basse -> Haute (Montante). progress 0 -> 1. Angle +PI/2 (Bas) -> -PI/2 (Haut).
-            angle = (Math.PI / 2) - (progress * Math.PI); 
+            // Le sens de rotation est INVERSE au sens horaire (Montée).
+            // On inverse l'angle pour forcer la rotation sur le côté GAUCHE.
+            angle = -((Math.PI / 2) - (progress * Math.PI)); 
         } else {
             // Cycle: Haute -> Basse (Descendante). progress 0 -> 1. Angle -PI/2 (Haut) -> +PI/2 (Bas).
-            angle = (-Math.PI / 2) + (progress * Math.PI);
+            // Le sens de rotation est DANS le sens horaire (Descente).
+            // On inverse l'angle pour forcer la rotation sur le côté DROIT.
+            angle = -((-Math.PI / 2) + (progress * Math.PI));
         }
         
         // --- 4. Dessin du Cadran (Aucun changement) ---
