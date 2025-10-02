@@ -1,6 +1,18 @@
 class TideClockCard extends HTMLElement {
     // Variable pour stocker l'ID de l'intervalle de rafraîchissement
     updateInterval = null; 
+    
+    /**
+     * Parse l'heure HH:MM en un objet Date pour la journée actuelle/spécifiée.
+     * Cette fonction est maintenant une méthode de la classe, résolvant le RangeError.
+     */
+    parseTideTime(timeStr, baseDate) {
+        // baseDate est passée en argument, et non plus 'now' par défaut
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        // Utilise baseDate (qui sera 'now' dans updateTideClock)
+        const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes, 0, 0);
+        return date;
+    }
 
     setConfig(config) {
         this.config = config;
@@ -54,18 +66,9 @@ class TideClockCard extends HTMLElement {
             return;
         }
 
-        // --- Fonctions utilitaires ---
-        /**
-         * Parse l'heure HH:MM en un objet Date pour la journée actuelle/spécifiée.
-         */
-        function parseTideTime(timeStr, baseDate = now) {
-            const [hours, minutes] = timeStr.split(':').map(Number);
-            const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes, 0, 0);
-            return date;
-        }
-
-        let tideHigh = parseTideTime(tideHighRaw);
-        let tideLow = parseTideTime(tideLowRaw);
+        // --- Utilisation de la nouvelle méthode de classe ---
+        let tideHigh = this.parseTideTime(tideHighRaw, now);
+        let tideLow = this.parseTideTime(tideLowRaw, now);
 
         // Durée exacte d'un demi-cycle lunaire (6h 12m 30s) en millisecondes
         const HALF_TIDAL_CYCLE_MS = (6 * 60 * 60 * 1000) + (12.5 * 60 * 1000); 
