@@ -97,22 +97,30 @@ class TideClockCard extends HTMLElement {
         ctx.textBaseline = 'middle';
         const markerRadius = radius - 30;
 
-        // Côté GAUCHE (marée montante) : 5 (bas à 270°) → 4 → 3 → 2 → 1 (haut à 90°)
-        const leftNumbers = [5, 4, 3, 2, 1];
-        for (let i = 0; i < leftNumbers.length; i++) {
-            const angle = (270 - i * degreesPerHour) * (Math.PI / 180);
+        // IMPORTANT : Les angles en canvas sont mesurés depuis la droite (0°) dans le sens horaire
+        // 0° = droite, 90° = bas, 180° = gauche, 270° = haut
+        // Pour avoir le haut = 0° et le bas = 180°, on doit ajuster
+
+        // Côté GAUCHE (marée montante) : 5 (bas) → 4 → 3 → 2 → 1 (haut)
+        // En coordonnées canvas : bas = 180°, haut = 0° (ou 360°)
+        // On va de 180° vers 360° par la gauche (180° -> 270° -> 360°)
+        for (let i = 0; i < 5; i++) {
+            const chiffre = 5 - i; // 5, 4, 3, 2, 1
+            const angle = Math.PI + i * degreesPerHour * (Math.PI / 180); // Commence à 180° (π)
             const x = centerX + markerRadius * Math.cos(angle);
             const y = centerY + markerRadius * Math.sin(angle);
-            ctx.fillText(leftNumbers[i], x, y);
+            ctx.fillText(chiffre, x, y);
         }
 
-        // Côté DROIT (marée descendante) : 5 (haut à 90°) → 4 → 3 → 2 → 1 (bas à 270°)
-        const rightNumbers = [5, 4, 3, 2, 1];
-        for (let i = 0; i < rightNumbers.length; i++) {
-            const angle = (90 + i * degreesPerHour) * (Math.PI / 180);
+        // Côté DROIT (marée descendante) : 5 (haut) → 4 → 3 → 2 → 1 (bas)
+        // En coordonnées canvas : haut = 0°, bas = 180°
+        // On va de 0° vers 180° par la droite (0° -> 90° -> 180°)
+        for (let i = 0; i < 5; i++) {
+            const chiffre = 5 - i; // 5, 4, 3, 2, 1
+            const angle = i * degreesPerHour * (Math.PI / 180); // Commence à 0°
             const x = centerX + markerRadius * Math.cos(angle);
             const y = centerY + markerRadius * Math.sin(angle);
-            ctx.fillText(rightNumbers[i], x, y);
+            ctx.fillText(chiffre, x, y);
         }
 
         // Texte fixe
@@ -128,16 +136,16 @@ class TideClockCard extends HTMLElement {
         const tendance = isNextTideHigh ? "Montante" : "Descendante";
         ctx.fillText(tendance, centerX, centerY + 30);
 
-        // Calcul de l'angle de l'aiguille basé sur les heures restantes
+        // Calcul de l'angle de l'aiguille basé sur les heures écoulées (pas restantes!)
+        const hoursElapsed = elapsed / (60 * 60 * 1000);
         let needleAngle;
+        
         if (isNextTideHigh) {
-            // Marée montante : l'aiguille part de 270° (bas) et remonte vers 90° (haut) par la gauche
-            // hoursRemaining diminue de ~6 à 0
-            needleAngle = (270 - (totalHours - hoursRemaining) * degreesPerHour) * (Math.PI / 180);
+            // Marée montante : l'aiguille part de 180° (bas) et va vers 0°/360° (haut) par la gauche
+            needleAngle = Math.PI + hoursElapsed * degreesPerHour * (Math.PI / 180);
         } else {
-            // Marée descendante : l'aiguille part de 90° (haut) et descend vers 270° (bas) par la droite
-            // hoursRemaining diminue de ~6 à 0
-            needleAngle = (90 + (totalHours - hoursRemaining) * degreesPerHour) * (Math.PI / 180);
+            // Marée descendante : l'aiguille part de 0° (haut) et va vers 180° (bas) par la droite
+            needleAngle = hoursElapsed * degreesPerHour * (Math.PI / 180);
         }
 
         // Aiguille
