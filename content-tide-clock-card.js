@@ -5,9 +5,7 @@ class TideClockCard extends HTMLElement {
      */
     parseTideTime(timeStr, baseDate) {
         const [hours, minutes] = timeStr.split(':').map(Number);
-        // Utilise la date fournie (baseDate), mais l'heure HH:MM
-        const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes, 0, 0);
-        return date;
+        return new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes, 0, 0);
     }
 
     setConfig(config) {
@@ -25,132 +23,104 @@ class TideClockCard extends HTMLElement {
     set hass(hass) {
         const tideHighRaw = hass.states[this.config.tide_high]?.state ?? null;
         const tideLowRaw = hass.states[this.config.tide_low]?.state ?? null;
-        const now = new Date(); // Heure actuelle
-        const DAY_MS = 24 * 60 * 60 * 1000;
-        // Durée exacte d'un demi-cycle lunaire (6h 12m 30s) en millisecondes
-        const HALF_TIDAL_CYCLE_MS = (6 * 60 * 60 * 1000) + (12.5 * 60 * 1000); 
+        const now = new Date();
 
         if (!tideHighRaw || !tideLowRaw) {
             this.innerHTML = `<ha-card><div style="padding:1em; color: black; text-align: center;">Erreur: Entités marée non disponibles.</div></ha-card>`;
             return;
         }
 
-        // --- 1. Création et tri des marées candidates sur une fenêtre de 48h ---
-        
-        const tideCandidates = [];
-        
-        // On génère les marées Haute et Basse pour les jours J-1, J et J+1
-        for (let i = -1; i <= 1; i++) { 
-            const dateOffset = new Date(now.getTime() + (i * DAY_MS));
-            
-            tideCandidates.push({ time: this.parseTideTime(tideHighRaw, dateOffset), isHigh: true });
-            tideCandidates.push({ time: this.parseTideTime(tideLowRaw, dateOffset), isHigh: false });
-        }
-        
-        // Trie chronologique
-        tideCandidates.sort((a, b) => a.time.getTime() - b.time.getTime());
+        // --- 1. Définition des marées haute et basse du jour ---
+        const tideHigh = this.parseTideTime(tideHighRaw, now);
+        const tideLow = this.parseTideTime(tideLowRaw, now);
 
-        // --- 2. Identification du cycle actuel : (prevTide) -> (nextTide) ---
-        
-        // 2a. Trouver la prochaine marée (nextTide)
-        let nextTideData = tideCandidates.find(t => t.time.getTime() > now.getTime());
-        if (!nextTideData) return; 
+        let prevTide, nextTide, isNextTideHigh;
 
-        let nextTide = nextTideData.time;
-        let isNextTideHigh = nextTideData.isHigh;
-        
-        // 2b. Déduire la marée précédente (prevTide)
-        let prevTide = new Date(nextTide.getTime() - HALF_TIDAL_CYCLE_MS);
-        
-        // 2c. Assurer que (prevTide) est la plus proche marée passée
-        while ((now.getTime() - prevTide.getTime()) > HALF_TIDAL_CYCLE_MS + 1000) {
-            prevTide.setTime(prevTide.getTime() + HALF_TIDAL_CYCLE_MS);
-            nextTide.setTime(nextTide.getTime() + HALF_TIDAL_CYCLE_MS);
-            isNextTideHigh = !isNextTideHigh;
+        // --- 2. Déterminer la plage actuelle (montante ou descendante) ---
+        if (tideLow < now && now < tideHigh) {
+            // Montée : basse -> haute
+            prevTide = tideLow;
+            nextTide = tideHigh;
+            isNextTideHigh = true;
+        } else if (tideHigh < now && now < tideLow) {
+            // Descente : haute -> basse
+            prevTide = tideHigh;
+            nextTide = tideLow;
+            isNextTideHigh = false;
+        } else {
+            // Cas où "now" est avant la première ou après la dernière du jour
+            // On estime en décalant d'un jour
+            if (now < tideLow && now < tideHigh) {
+                prevTide = new Date(tideHigh.getTime() - 12 * 60 * 60 * 1000);
+                nextTide = tideLow < tideHigh ? tideLow : tideHigh;
+                isNextTideHigh = nextTide.getTime() === tideHigh.getTime();
+            } else {
+                prevTide = tideLow > tideHigh ? tideLow : tideHigh;
+                nextTide = new Date(prevTide.getTime() + 12 * 60 * 60 * 1000);
+                isNextTideHigh = nextTide.getTime() === tideHigh.getTime();
+            }
         }
 
-        // --- 3. Calcul de la progression et de l'angle (Logique simple et correcte) ---
-        
-        const totalDuration = HALF_TIDAL_CYCLE_MS;
-        const elapsed = now.getTime() - prevTide.getTime(); 
-        
+        // --- 3. Progression réelle entre prevTide et nextTide ---
+        const totalDuration = nextTide.getTime() - prevTide.getTime();
+        const elapsed = now.getTime() - prevTide.getTime();
         let progress = elapsed / totalDuration;
-        progress = Math.min(1, Math.max(0, progress)); // Borner entre 0 (0%) et 1 (100%)
+        progress = Math.min(1, Math.max(0, progress));
 
         let angle;
-
         if (isNextTideHigh) {
-            // Marée MONTANTE: Basse (prevTide) -> Haute (nextTide)
-            // Mouvement anti-horaire. De Bas (PI/2) à Haut (-PI/2).
-            // Le déplacement va de PI/2 vers -PI/2.
-            // Formule: Départ (PI/2) - Avancement (progress * PI)
-            angle = (Math.PI / 2) - (progress * Math.PI); 
-            
+            // Montée : Basse (PI/2) -> Haute (-PI/2)
+            angle = (Math.PI / 2) - (progress * Math.PI);
         } else {
-            // Marée DESCENDANTE: Haute (prevTide) -> Basse (nextTide)
-            // Mouvement horaire. De Haut (-PI/2) à Bas (PI/2).
-            // Le déplacement va de -PI/2 vers PI/2.
-            // Formule: Départ (-PI/2) + Avancement (progress * PI)
+            // Descente : Haute (-PI/2) -> Basse (PI/2)
             angle = (-Math.PI / 2) + (progress * Math.PI);
         }
-        
-        // --- 4. Dessin du Cadran ---
+
+        // --- 4. Dessin du cadran ---
         const canvas = this.querySelector('#tideClock');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         const centerX = 150, centerY = 150;
-        const radius = 140; 
-        const outerRadius = 150; 
+        const radius = 140;
+        const outerRadius = 150;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Cadre Simulé (Bois/Clair)
+
+        // Bordure extérieure
         ctx.save();
         ctx.beginPath();
         ctx.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI);
-        ctx.fillStyle = '#C8A878'; 
+        ctx.fillStyle = '#C8A878';
         ctx.fill();
-
-        // Ajout d'une ombre
         ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
         ctx.shadowBlur = 10;
         ctx.shadowOffsetX = 3;
         ctx.shadowOffsetY = 3;
-        ctx.fill(); 
-        ctx.restore(); 
+        ctx.fill();
+        ctx.restore();
 
-        // Cadran Intérieur (Bleu Nuit)
+        // Cadran intérieur
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = '#1A237E'; 
+        ctx.fillStyle = '#1A237E';
         ctx.fill();
         ctx.strokeStyle = '#FFFFFF';
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Points et Chiffres (Heures restantes)
+        // Marqueurs heures restantes
         ctx.font = 'bold 16px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FFFFFF';
-        
         const markerRadius = radius - 15;
         for (let i = 0; i < 12; i++) {
-            // Rotation pour aligner 12h en haut (-PI/2)
             const currentAngle = (i * Math.PI / 6) - Math.PI / 2;
-            
             let label = '';
-            
-            // Côté gauche (indices 1 à 5)
             if (i >= 1 && i <= 5) {
-                 // Montée (anti-horaire): 5, 4, 3, 2, 1 
-                 label = (6 - i).toString();
-            } 
-            // Côté droit (indices 7 à 11)
-            else if (i >= 7 && i <= 11) {
-                 // Descente (horaire): 5, 4, 3, 2, 1
-                 label = (12 - i).toString(); 
+                label = (6 - i).toString();
+            } else if (i >= 7 && i <= 11) {
+                label = (12 - i).toString();
             }
-            
             if (label) {
                 const x = centerX + markerRadius * Math.cos(currentAngle);
                 const y = centerY + markerRadius * Math.sin(currentAngle);
@@ -158,79 +128,51 @@ class TideClockCard extends HTMLElement {
             }
         }
 
-        // Texte de Marée (Haut et Bas)
+        // Texte marées
         ctx.font = 'bold 12px sans-serif';
         ctx.fillStyle = '#FFFFFF';
-        
-        // Marée Haute (Haut, position 12h)
-        const hauteYText = centerY - radius + 40;
-        ctx.fillText("MARÉE HAUTE", centerX, hauteYText);
-        
-        // Marée Basse (Bas, position 6h)
-        const basseYText = centerY + radius - 40; 
-        ctx.fillText("MARÉE BASSE", centerX, basseYText); 
-
-        // Titre Central
+        ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 40);
+        ctx.fillText("MARÉE BASSE", centerX, centerY + radius - 40);
         ctx.font = '14px sans-serif';
-        ctx.fillStyle = '#FFFFFF';
         ctx.fillText("HORAIRES DES MARÉES", centerX, centerY + 10);
-        
-        // --- Aiguille (Applique l'inversion sur l'axe X pour corriger le problème du Canvas) ---
+
+        // Aiguille
         ctx.save();
-        
-        // 1. Déplace l'origine au centre du cercle
-        ctx.translate(centerX, centerY); 
-        
-        // 2. Inverse l'axe X. Cela annule l'effet miroir de l'environnement Canvas.
-        ctx.scale(-1, 1); 
-        
-        // 3. Dessine l'aiguille à partir de l'origine (0, 0) avec l'angle calculé.
+        ctx.translate(centerX, centerY);
+        ctx.scale(-1, 1);
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo(110 * Math.cos(angle), 110 * Math.sin(angle));
-        ctx.strokeStyle = '#E0B55E'; 
+        ctx.strokeStyle = '#E0B55E';
         ctx.lineWidth = 6;
         ctx.lineCap = 'round';
         ctx.stroke();
-
-        // 4. Rétablit le contexte avant de dessiner les points centraux
         ctx.restore();
-        
-        // Cercle central de l'aiguille (dessiné par rapport au centre réel)
+
+        // Centre de l'aiguille
         ctx.beginPath();
         ctx.arc(centerX, centerY, 8, 0, 2 * Math.PI);
         ctx.fillStyle = '#E0B55E';
         ctx.fill();
-        
-        // Petit cercle intérieur (blanc)
         ctx.beginPath();
         ctx.arc(centerX, centerY, 4, 0, 2 * Math.PI);
         ctx.fillStyle = '#FFFFFF';
         ctx.fill();
 
-        // --- Affichage des heures (rectangles blancs) ---
-        
+        // Affichage heures haute/basse
         const boxWidth = 50;
         const boxHeight = 20;
         const fontHour = 'bold 12px sans-serif';
         const textColor = '#000000';
-
-        // Marée Haute (Heure AU-DESSUS du texte)
-        const hauteYBox = centerY - radius + 5; 
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(centerX - boxWidth / 2, hauteYBox, boxWidth, boxHeight);
+        ctx.fillRect(centerX - boxWidth / 2, centerY - radius + 5, boxWidth, boxHeight);
         ctx.font = fontHour;
         ctx.fillStyle = textColor;
-        ctx.fillText(tideHighRaw, centerX, hauteYBox + 13);
-
-        // Marée Basse (Heure EN-DESSOUS du texte)
-        const basseYBox = basseYText + 5; 
-        
+        ctx.fillText(tideHighRaw, centerX, centerY - radius + 5 + 13);
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(centerX - boxWidth / 2, basseYBox, boxWidth, boxHeight); 
-        ctx.font = fontHour;
+        ctx.fillRect(centerX - boxWidth / 2, centerY + radius - 35, boxWidth, boxHeight);
         ctx.fillStyle = textColor;
-        ctx.fillText(tideLowRaw, centerX, basseYBox + 13);
+        ctx.fillText(tideLowRaw, centerX, centerY + radius - 35 + 13);
     }
 
     getCardSize() {
