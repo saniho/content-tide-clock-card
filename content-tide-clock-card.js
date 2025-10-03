@@ -97,20 +97,21 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
         const markerRadius = radius - 15;
+        const angleStep = Math.PI / 8; // Ecart angulaire entre chaque chiffre
 
         // Chiffres côté gauche (5 à 1)
         for (let i = 1; i <= 5; i++) {
-            const angle = (Math.PI / 2) + ((i - 1) * (Math.PI / 8));
+            const angle = (Math.PI / 2) + ((i - 1) * angleStep);
             const x = centerX - markerRadius * Math.cos(angle);
-            const y = centerY + markerRadius * Math.sin(angle);
+            const y = centerY - markerRadius * Math.sin(angle);
             ctx.fillText((6 - i).toString(), x, y);
         }
 
         // Chiffres côté droit (1 à 5)
         for (let i = 1; i <= 5; i++) {
-            const angle = (Math.PI / 2) - ((i - 1) * (Math.PI / 8));
+            const angle = (Math.PI / 2) - ((i - 1) * angleStep);
             const x = centerX + markerRadius * Math.cos(angle);
-            const y = centerY + markerRadius * Math.sin(angle);
+            const y = centerY - markerRadius * Math.sin(angle);
             ctx.fillText(i.toString(), x, y);
         }
         
