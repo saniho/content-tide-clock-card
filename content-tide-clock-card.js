@@ -27,7 +27,7 @@ class TideClockCard extends HTMLElement {
             return;
         }
 
-        // --- 1. Marée haute/basse données ---
+        // --- 1. Données de marée ---
         const baseHigh = this.parseTideTime(tideHighRaw, now);
         const baseLow = this.parseTideTime(tideLowRaw, now);
 
@@ -62,10 +62,10 @@ class TideClockCard extends HTMLElement {
 
         let angle;
         if (isNextTideHigh) {
-            // Angle correct pour une marée montante (de bas en haut)
+            // Angle pour marée montante (de bas en haut)
             angle = Math.PI - (progress * Math.PI); 
         } else {
-            // Angle correct pour une marée descendante (de haut en bas)
+            // Angle pour marée descendante (de haut en bas)
             angle = progress * Math.PI;
         }
 
@@ -97,20 +97,22 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
         const markerRadius = radius - 15;
-        const ySpacing = 25; // Espacement vertical entre les chiffres
+        const angleStep = Math.PI / 6; // Ecart angulaire pour 5 chiffres
 
         // Chiffres côté gauche (1 à 5, de haut en bas)
-        const leftLabels = ['1', '2', '3', '4', '5'];
-        for (let i = 0; i < leftLabels.length; i++) {
-            const y = centerY - (2 * ySpacing) + (i * ySpacing);
-            ctx.fillText(leftLabels[i], centerX - markerRadius, y);
+        for (let i = 0; i <= 4; i++) {
+            const angle = (Math.PI / 2) + (i * angleStep);
+            const x = centerX - markerRadius * Math.cos(angle);
+            const y = centerY - markerRadius * Math.sin(angle);
+            ctx.fillText(i + 1, x, y);
         }
 
-        // Chiffres côté droit (5 à 1, de haut en bas)
-        const rightLabels = ['5', '4', '3', '2', '1'];
-        for (let i = 0; i < rightLabels.length; i++) {
-            const y = centerY - (2 * ySpacing) + (i * ySpacing);
-            ctx.fillText(rightLabels[i], centerX + markerRadius, y);
+        // Chiffres côté droit (1 à 5, de bas en haut)
+        for (let i = 0; i <= 4; i++) {
+            const angle = (3 * Math.PI / 2) - (i * angleStep);
+            const x = centerX + markerRadius * Math.cos(angle);
+            const y = centerY + markerRadius * Math.sin(angle);
+            ctx.fillText(i + 1, x, y);
         }
         
         // Texte fixe
