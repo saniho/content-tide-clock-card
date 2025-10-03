@@ -27,32 +27,33 @@ class TideClockCard extends HTMLElement {
             return;
         }
 
-        // --- 1. Marée haute/basse données ---
-        const baseHigh = this.parseTideTime(tideHighRaw, now);
-        const baseLow = this.parseTideTime(tideLowRaw, now);
+        // --- 1. Marée haute/basse données (ce sont les PROCHAINES marées) ---
+        let nextHigh = this.parseTideTime(tideHighRaw, now);
+        let nextLow = this.parseTideTime(tideLowRaw, now);
+        
+        // Si l'heure est passée aujourd'hui, c'est pour demain
+        if (nextHigh < now) nextHigh = new Date(nextHigh.getTime() + 24 * 60 * 60 * 1000);
+        if (nextLow < now) nextLow = new Date(nextLow.getTime() + 24 * 60 * 60 * 1000);
 
         // Durée moyenne d'un demi-cycle (6h12m30s)
         const HALF_TIDAL_MS = (6 * 60 * 60 * 1000) + (12.5 * 60 * 1000);
 
-        // --- 2. Générer 4 marées sur 24h ---
-        const tides = [];
-        tides.push({ time: baseHigh, isHigh: true });
-        tides.push({ time: new Date(baseHigh.getTime() + HALF_TIDAL_MS), isHigh: false });
-        tides.push({ time: new Date(baseHigh.getTime() + 2 * HALF_TIDAL_MS), isHigh: true });
-        tides.push({ time: new Date(baseHigh.getTime() + 3 * HALF_TIDAL_MS), isHigh: false });
-        tides.push({ time: baseLow, isHigh: false });
-        tides.push({ time: new Date(baseLow.getTime() + HALF_TIDAL_MS), isHigh: true });
-        tides.push({ time: new Date(baseLow.getTime() + 2 * HALF_TIDAL_MS), isHigh: false });
-        tides.push({ time: new Date(baseLow.getTime() + 3 * HALF_TIDAL_MS), isHigh: true });
-
-        tides.sort((a, b) => a.time - b.time);
-
-        // --- 3. Marée précédente / suivante ---
-        let nextTide = tides.find(t => t.time > now);
-        if (!nextTide) return;
-        let idx = tides.indexOf(nextTide);
-        let prevTide = tides[idx - 1] ?? tides[tides.length - 1];
-        let isNextTideHigh = nextTide.isHigh;
+        // --- 2. Déterminer la prochaine marée et calculer la précédente ---
+        let nextTide, prevTide, isNextTideHigh;
+        
+        if (nextHigh < nextLow) {
+            // La prochaine marée est HAUTE
+            nextTide = { time: nextHigh, isHigh: true };
+            // La marée précédente était BASSE (6h12m avant)
+            prevTide = { time: new Date(nextHigh.getTime() - HALF_TIDAL_MS), isHigh: false };
+            isNextTideHigh = true;
+        } else {
+            // La prochaine marée est BASSE
+            nextTide = { time: nextLow, isHigh: false };
+            // La marée précédente était HAUTE (6h12m avant)
+            prevTide = { time: new Date(nextLow.getTime() - HALF_TIDAL_MS), isHigh: true };
+            isNextTideHigh = false;
+        }
 
         // --- 4. Progression ---
         const totalDuration = nextTide.time.getTime() - prevTide.time.getTime();
@@ -93,20 +94,24 @@ class TideClockCard extends HTMLElement {
         ctx.textBaseline = 'middle';
         const markerRadius = radius - 20;
 
-        // Côté DROIT (marée montante) : 5 (haut) → 4 → 3 → 2 → 1 (bas)
-        for (let i = 5; i >= 1; i--) {
-            const angle = Math.PI / 2 - ((5 - i) / 5) * Math.PI; // De 90° à -90°
+        // Côté DROIT (marée montante) : 5 (en haut près de MARÉE HAUTE) → 1 (en bas près de MARÉE BASSE)
+        // Position: haut-droite vers bas-droite
+        for (let i = 1; i <= 5; i++) {
+            // Angle de 30° (près du haut) à 150° (près du bas) sur le côté droit
+            const angle = (30 + (i - 1) * 30) * (Math.PI / 180);
             const x = centerX + markerRadius * Math.cos(angle);
-            const y = centerY - markerRadius * Math.sin(angle);
-            ctx.fillText(i, x, y);
+            const y = centerY + markerRadius * Math.sin(angle);
+            ctx.fillText(6 - i, x, y); // Affiche 5, 4, 3, 2, 1
         }
 
-        // Côté GAUCHE (marée descendante) : 1 (haut) → 2 → 3 → 4 → 5 (bas)
+        // Côté GAUCHE (marée descendante) : 1 (en haut près de MARÉE HAUTE) → 5 (en bas près de MARÉE BASSE)
+        // Position: haut-gauche vers bas-gauche
         for (let i = 1; i <= 5; i++) {
-            const angle = Math.PI / 2 + ((i - 1) / 5) * Math.PI; // De 90° à 270°
+            // Angle de 150° (près du haut) à 30° (près du bas) sur le côté gauche
+            const angle = (150 + (i - 1) * 30) * (Math.PI / 180);
             const x = centerX + markerRadius * Math.cos(angle);
-            const y = centerY - markerRadius * Math.sin(angle);
-            ctx.fillText(i, x, y);
+            const y = centerY + markerRadius * Math.sin(angle);
+            ctx.fillText(i, x, y); // Affiche 1, 2, 3, 4, 5
         }
 
         // Texte fixe
@@ -125,11 +130,13 @@ class TideClockCard extends HTMLElement {
         // Calcul de l'angle de l'aiguille
         let needleAngle;
         if (isNextTideHigh) {
-            // Marée montante : de bas (-90°) vers haut (90°)
-            needleAngle = -Math.PI / 2 + (progress * Math.PI);
+            // Marée montante : de 180° (bas) vers 0° (haut) en passant par la GAUCHE (sens antihoraire)
+            // 180° → 270° → 0°
+            needleAngle = (180 + progress * 180) * (Math.PI / 180);
         } else {
-            // Marée descendante : de haut (90°) vers bas (-90°)
-            needleAngle = Math.PI / 2 - (progress * Math.PI);
+            // Marée descendante : de 0° (haut) vers 180° (bas) en passant par la DROITE (sens horaire)
+            // 0° → 90° → 180°
+            needleAngle = (progress * 180) * (Math.PI / 180);
         }
 
         // Aiguille
