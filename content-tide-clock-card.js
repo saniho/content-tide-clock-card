@@ -93,22 +93,25 @@ class TideClockCard extends HTMLElement {
         ctx.stroke();
 
         // Chiffres
-        const markerRadius = radius - 15;
-        const labels = ['5', '4', '3', '2', '1', '1', '2', '3', '4', '5'];
-        const numLabels = labels.length;
-        const startAngle = Math.PI * 0.75; 
-        const endAngle = Math.PI * 0.25;
-        const angleStep = (endAngle - startAngle) / (numLabels - 1);
-
         ctx.font = 'bold 16px sans-serif';
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
+        const markerRadius = radius - 15;
 
-        for (let i = 0; i < numLabels; i++) {
-            const currentAngle = startAngle + i * angleStep;
-            const x = centerX + markerRadius * Math.cos(currentAngle);
-            const y = centerY + markerRadius * Math.sin(currentAngle);
-            ctx.fillText(labels[i], x, y);
+        // Chiffres côté gauche (5 à 1)
+        for (let i = 1; i <= 5; i++) {
+            const angle = (Math.PI / 2) + ((i - 1) * (Math.PI / 8));
+            const x = centerX - markerRadius * Math.cos(angle);
+            const y = centerY + markerRadius * Math.sin(angle);
+            ctx.fillText((6 - i).toString(), x, y);
+        }
+
+        // Chiffres côté droit (1 à 5)
+        for (let i = 1; i <= 5; i++) {
+            const angle = (Math.PI / 2) - ((i - 1) * (Math.PI / 8));
+            const x = centerX + markerRadius * Math.cos(angle);
+            const y = centerY + markerRadius * Math.sin(angle);
+            ctx.fillText(i.toString(), x, y);
         }
         
         // Texte fixe
