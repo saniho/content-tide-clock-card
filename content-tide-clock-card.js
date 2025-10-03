@@ -93,19 +93,21 @@ class TideClockCard extends HTMLElement {
         ctx.textBaseline = 'middle';
         const markerRadius = radius - 20;
 
-        // Côté DROIT (marée montante) : 5 en haut → 1 en bas
+        // Côté DROIT (marée montante) : 1 (bas) → 2 → 3 → 4 → 5 (haut)
+        // Angle -90° (bas) vers 90° (haut)
         for (let i = 1; i <= 5; i++) {
-            const anglePos = Math.PI - (i / 6) * Math.PI; // De π à π/6
-            const x = centerX + markerRadius * Math.cos(anglePos);
-            const y = centerY - markerRadius * Math.sin(anglePos);
-            ctx.fillText(6 - i, x, y); // Affiche 5, 4, 3, 2, 1
+            const angle = -Math.PI / 2 + ((i - 1) / 5) * Math.PI; // De -90° à 90°
+            const x = centerX + markerRadius * Math.cos(angle);
+            const y = centerY - markerRadius * Math.sin(angle);
+            ctx.fillText(i, x, y); // Affiche 1, 2, 3, 4, 5
         }
 
-        // Côté GAUCHE (marée descendante) : 1 en haut → 5 en bas
+        // Côté GAUCHE (marée descendante) : 5 (haut) → 4 → 3 → 2 → 1 (bas)
+        // Angle 90° (haut) vers 270° (bas)
         for (let i = 1; i <= 5; i++) {
-            const anglePos = (i / 6) * Math.PI; // De π/6 à π
-            const x = centerX - markerRadius * Math.cos(anglePos);
-            const y = centerY - markerRadius * Math.sin(anglePos);
+            const angle = Math.PI / 2 + ((i - 1) / 5) * Math.PI; // De 90° à 270°
+            const x = centerX + markerRadius * Math.cos(angle);
+            const y = centerY - markerRadius * Math.sin(angle);
             ctx.fillText(6 - i, x, y); // Affiche 5, 4, 3, 2, 1
         }
 
@@ -122,20 +124,19 @@ class TideClockCard extends HTMLElement {
         const tendance = isNextTideHigh ? "Montante" : "Descendante";
         ctx.fillText(tendance, centerX, centerY + 30);
 
-        // Calcul de l'angle de l'aiguille (basé sur le temps restant)
+        // Calcul de l'angle de l'aiguille
         let needleAngle;
         if (isNextTideHigh) {
-            // Marée montante : de bas (0°) vers haut (180°)
-            needleAngle = progress * Math.PI;
+            // Marée montante : de bas (-90°) vers haut (90°)
+            needleAngle = -Math.PI / 2 + (progress * Math.PI);
         } else {
-            // Marée descendante : de haut (180°) vers bas (0°)
-            needleAngle = Math.PI - (progress * Math.PI);
+            // Marée descendante : de haut (90°) vers bas (-90°)
+            needleAngle = Math.PI / 2 - (progress * Math.PI);
         }
 
         // Aiguille
         ctx.save();
         ctx.translate(centerX, centerY);
-        ctx.rotate(-Math.PI / 2); // Référence à midi
         ctx.rotate(needleAngle);
         ctx.beginPath();
         ctx.moveTo(0, 0);
