@@ -94,24 +94,22 @@ class TideClockCard extends HTMLElement {
         ctx.textBaseline = 'middle';
         const markerRadius = radius - 20;
 
-        // Côté DROIT (marée montante) : 5 (en haut près de MARÉE HAUTE) → 1 (en bas près de MARÉE BASSE)
-        // Position: haut-droite vers bas-droite
+        // Côté GAUCHE (marée montante) : 5 (bas) → 4 → 3 → 2 → 1 (haut)
+        // Angles de 270° (bas) à 90° (haut) en passant par la gauche
         for (let i = 1; i <= 5; i++) {
-            // Angle de 30° (près du haut) à 150° (près du bas) sur le côté droit
-            const angle = (30 + (i - 1) * 30) * (Math.PI / 180);
+            const angle = (270 - (i - 1) * 36) * (Math.PI / 180); // 270°, 234°, 198°, 162°, 126°
             const x = centerX + markerRadius * Math.cos(angle);
             const y = centerY + markerRadius * Math.sin(angle);
             ctx.fillText(6 - i, x, y); // Affiche 5, 4, 3, 2, 1
         }
 
-        // Côté GAUCHE (marée descendante) : 1 (en haut près de MARÉE HAUTE) → 5 (en bas près de MARÉE BASSE)
-        // Position: haut-gauche vers bas-gauche
+        // Côté DROIT (marée descendante) : 5 (haut) → 4 → 3 → 2 → 1 (bas)
+        // Angles de 90° (haut) à 270° (bas) en passant par la droite
         for (let i = 1; i <= 5; i++) {
-            // Angle de 150° (près du haut) à 30° (près du bas) sur le côté gauche
-            const angle = (150 + (i - 1) * 30) * (Math.PI / 180);
+            const angle = (90 - (i - 1) * 36) * (Math.PI / 180); // 90°, 54°, 18°, -18°, -54°
             const x = centerX + markerRadius * Math.cos(angle);
             const y = centerY + markerRadius * Math.sin(angle);
-            ctx.fillText(i, x, y); // Affiche 1, 2, 3, 4, 5
+            ctx.fillText(6 - i, x, y); // Affiche 5, 4, 3, 2, 1
         }
 
         // Texte fixe
