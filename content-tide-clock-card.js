@@ -62,9 +62,11 @@ class TideClockCard extends HTMLElement {
 
         let angle;
         if (isNextTideHigh) {
-            angle = (Math.PI / 2) + (progress * Math.PI); 
+            // Angle correct pour une marée montante (de bas en haut)
+            angle = Math.PI - (progress * Math.PI); 
         } else {
-            angle = (Math.PI / 2) - (progress * Math.PI);
+            // Angle correct pour une marée descendante (de haut en bas)
+            angle = progress * Math.PI;
         }
 
         // --- 5. Dessin du cadran ---
@@ -94,8 +96,8 @@ class TideClockCard extends HTMLElement {
         const markerRadius = radius - 15;
         const labels = ['5', '4', '3', '2', '1', '1', '2', '3', '4', '5'];
         const numLabels = labels.length;
-        const startAngle = Math.PI * 0.7; 
-        const endAngle = Math.PI * 0.3;
+        const startAngle = Math.PI * 0.75; 
+        const endAngle = Math.PI * 0.25;
         const angleStep = (endAngle - startAngle) / (numLabels - 1);
 
         ctx.font = 'bold 16px sans-serif';
@@ -125,7 +127,7 @@ class TideClockCard extends HTMLElement {
         // Aiguille
         ctx.save();
         ctx.translate(centerX, centerY);
-        ctx.rotate(-Math.PI / 2); // Rotation initiale pour que 0° soit en haut
+        ctx.rotate(-Math.PI / 2);
         ctx.rotate(angle);
         ctx.beginPath();
         ctx.moveTo(0, 0);
