@@ -1,8 +1,5 @@
 class TideClockCard extends HTMLElement {
     
-    /**
-     * Parse l'heure HH:MM en un objet Date pour la journée actuelle/spécifiée.
-     */
     parseTideTime(timeStr, baseDate) {
         const [hours, minutes] = timeStr.split(':').map(Number);
         return new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes, 0, 0);
@@ -30,111 +27,91 @@ class TideClockCard extends HTMLElement {
             return;
         }
 
-        // --- 1. Définition des marées haute et basse du jour ---
-        const tideHigh = this.parseTideTime(tideHighRaw, now);
-        const tideLow = this.parseTideTime(tideLowRaw, now);
+        // --- 1. Marée haute/basse données ---
+        const baseHigh = this.parseTideTime(tideHighRaw, now);
+        const baseLow = this.parseTideTime(tideLowRaw, now);
 
-        let prevTide, nextTide, isNextTideHigh;
+        // Durée moyenne d’un demi-cycle (6h12m30s)
+        const HALF_TIDAL_MS = (6 * 60 * 60 * 1000) + (12.5 * 60 * 1000);
 
-        // --- 2. Déterminer la plage actuelle (montante ou descendante) ---
-        if (tideLow < now && now < tideHigh) {
-            // Montée : basse -> haute
-            prevTide = tideLow;
-            nextTide = tideHigh;
-            isNextTideHigh = true;
-        } else if (tideHigh < now && now < tideLow) {
-            // Descente : haute -> basse
-            prevTide = tideHigh;
-            nextTide = tideLow;
-            isNextTideHigh = false;
-        } else {
-            // Cas où "now" est avant la première ou après la dernière du jour
-            // On estime en décalant d'un jour
-            if (now < tideLow && now < tideHigh) {
-                prevTide = new Date(tideHigh.getTime() - 12 * 60 * 60 * 1000);
-                nextTide = tideLow < tideHigh ? tideLow : tideHigh;
-                isNextTideHigh = nextTide.getTime() === tideHigh.getTime();
-            } else {
-                prevTide = tideLow > tideHigh ? tideLow : tideHigh;
-                nextTide = new Date(prevTide.getTime() + 12 * 60 * 60 * 1000);
-                isNextTideHigh = nextTide.getTime() === tideHigh.getTime();
-            }
-        }
+        // --- 2. Générer 4 marées sur 24h ---
+        const tides = [];
+        tides.push({ time: baseHigh, isHigh: true });
+        tides.push({ time: new Date(baseHigh.getTime() + HALF_TIDAL_MS), isHigh: false });
+        tides.push({ time: new Date(baseHigh.getTime() + 2 * HALF_TIDAL_MS), isHigh: true });
+        tides.push({ time: new Date(baseHigh.getTime() + 3 * HALF_TIDAL_MS), isHigh: false });
+        tides.push({ time: baseLow, isHigh: false });
+        tides.push({ time: new Date(baseLow.getTime() + HALF_TIDAL_MS), isHigh: true });
+        tides.push({ time: new Date(baseLow.getTime() + 2 * HALF_TIDAL_MS), isHigh: false });
+        tides.push({ time: new Date(baseLow.getTime() + 3 * HALF_TIDAL_MS), isHigh: true });
 
-        // --- 3. Progression réelle entre prevTide et nextTide ---
-        const totalDuration = nextTide.getTime() - prevTide.getTime();
-        const elapsed = now.getTime() - prevTide.getTime();
+        tides.sort((a, b) => a.time - b.time);
+
+        // --- 3. Marée précédente / suivante ---
+        let nextTide = tides.find(t => t.time > now);
+        if (!nextTide) return;
+        let idx = tides.indexOf(nextTide);
+        let prevTide = tides[idx - 1] ?? tides[tides.length - 1];
+        let isNextTideHigh = nextTide.isHigh;
+
+        // --- 4. Progression ---
+        const totalDuration = nextTide.time.getTime() - prevTide.time.getTime();
+        const elapsed = now.getTime() - prevTide.time.getTime();
         let progress = elapsed / totalDuration;
         progress = Math.min(1, Math.max(0, progress));
 
         let angle;
         if (isNextTideHigh) {
-            // Montée : Basse (PI/2) -> Haute (-PI/2)
-            angle = (Math.PI / 2) - (progress * Math.PI);
+            angle = (Math.PI / 2) - (progress * Math.PI); 
         } else {
-            // Descente : Haute (-PI/2) -> Basse (PI/2)
             angle = (-Math.PI / 2) + (progress * Math.PI);
         }
 
-        // --- 4. Dessin du cadran ---
+        // --- 5. Dessin du cadran ---
         const canvas = this.querySelector('#tideClock');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         const centerX = 150, centerY = 150;
-        const radius = 140;
-        const outerRadius = 150;
+        const radius = 140, outerRadius = 150;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Bordure extérieure
-        ctx.save();
         ctx.beginPath();
         ctx.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI);
         ctx.fillStyle = '#C8A878';
         ctx.fill();
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-        ctx.shadowBlur = 10;
-        ctx.shadowOffsetX = 3;
-        ctx.shadowOffsetY = 3;
-        ctx.fill();
-        ctx.restore();
 
-        // Cadran intérieur
+        // Cadran
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
         ctx.fillStyle = '#1A237E';
         ctx.fill();
         ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Marqueurs heures restantes
+        // Chiffres
         ctx.font = 'bold 16px sans-serif';
-        ctx.textAlign = 'center';
         ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
         const markerRadius = radius - 15;
-        for (let i = 0; i < 12; i++) {
-            const currentAngle = (i * Math.PI / 6) - Math.PI / 2;
-            let label = '';
-            if (i >= 1 && i <= 5) {
-                label = (6 - i).toString();
-            } else if (i >= 7 && i <= 11) {
-                label = (12 - i).toString();
-            }
-            if (label) {
-                const x = centerX + markerRadius * Math.cos(currentAngle);
-                const y = centerY + markerRadius * Math.sin(currentAngle);
-                ctx.fillText(label, x, y + 5);
-            }
+        for (let i = 1; i <= 5; i++) {
+            ctx.fillText(i.toString(), centerX - markerRadius, centerY - (i - 3) * 25);
+            ctx.fillText(i.toString(), centerX + markerRadius, centerY + (i - 3) * 25);
         }
 
-        // Texte marées
+        // Texte fixe
         ctx.font = 'bold 12px sans-serif';
-        ctx.fillStyle = '#FFFFFF';
         ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 40);
         ctx.fillText("MARÉE BASSE", centerX, centerY + radius - 40);
         ctx.font = '14px sans-serif';
         ctx.fillText("HORAIRES DES MARÉES", centerX, centerY + 10);
+
+        // Texte dynamique Montante/Descendante
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillStyle = '#FFD700';
+        const tendance = isNextTideHigh ? "Montante" : "Descendante";
+        ctx.fillText(tendance, centerX, centerY + 30);
 
         // Aiguille
         ctx.save();
@@ -149,7 +126,7 @@ class TideClockCard extends HTMLElement {
         ctx.stroke();
         ctx.restore();
 
-        // Centre de l'aiguille
+        // Centre
         ctx.beginPath();
         ctx.arc(centerX, centerY, 8, 0, 2 * Math.PI);
         ctx.fillStyle = '#E0B55E';
@@ -159,20 +136,17 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         ctx.fill();
 
-        // Affichage heures haute/basse
-        const boxWidth = 50;
-        const boxHeight = 20;
-        const fontHour = 'bold 12px sans-serif';
-        const textColor = '#000000';
+        // Heures affichées
+        const boxWidth = 50, boxHeight = 20;
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(centerX - boxWidth / 2, centerY - radius + 5, boxWidth, boxHeight);
-        ctx.font = fontHour;
-        ctx.fillStyle = textColor;
-        ctx.fillText(tideHighRaw, centerX, centerY - radius + 5 + 13);
+        ctx.fillRect(centerX - boxWidth/2, centerY - radius + 5, boxWidth, boxHeight);
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText(tideHighRaw, centerX, centerY - radius + 18);
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(centerX - boxWidth / 2, centerY + radius - 35, boxWidth, boxHeight);
-        ctx.fillStyle = textColor;
-        ctx.fillText(tideLowRaw, centerX, centerY + radius - 35 + 13);
+        ctx.fillRect(centerX - boxWidth/2, centerY + radius - 35, boxWidth, boxHeight);
+        ctx.fillStyle = '#000000';
+        ctx.fillText(tideLowRaw, centerX, centerY + radius - 22);
     }
 
     getCardSize() {
