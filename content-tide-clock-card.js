@@ -97,17 +97,17 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
         const markerRadius = radius - 15;
-        const yOffset = 18; // Décalage vertical pour centrer les chiffres
+        const yOffset = 18; 
 
-        // Chiffres côté gauche (5 à 1)
-        const leftLabels = ['5', '4', '3', '2', '1'];
+        // Chiffres côté gauche (1 à 5, de haut en bas)
+        const leftLabels = ['1', '2', '3', '4', '5'];
         for (let i = 0; i < leftLabels.length; i++) {
             const y = centerY + (i - 2) * 25;
             ctx.fillText(leftLabels[i], centerX - markerRadius, y + yOffset);
         }
 
-        // Chiffres côté droit (1 à 5)
-        const rightLabels = ['1', '2', '3', '4', '5'];
+        // Chiffres côté droit (1 à 5, de bas en haut)
+        const rightLabels = ['5', '4', '3', '2', '1'];
         for (let i = 0; i < rightLabels.length; i++) {
             const y = centerY + (i - 2) * 25;
             ctx.fillText(rightLabels[i], centerX + markerRadius, y + yOffset);
