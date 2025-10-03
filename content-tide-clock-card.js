@@ -27,7 +27,7 @@ class TideClockCard extends HTMLElement {
             return;
         }
 
-        // --- 1. Données de marée ---
+        // --- 1. Marée haute/basse données ---
         const baseHigh = this.parseTideTime(tideHighRaw, now);
         const baseLow = this.parseTideTime(tideLowRaw, now);
 
@@ -62,10 +62,10 @@ class TideClockCard extends HTMLElement {
 
         let angle;
         if (isNextTideHigh) {
-            // Angle pour marée montante (de bas en haut)
+            // Angle correct pour une marée montante (de bas en haut)
             angle = Math.PI - (progress * Math.PI); 
         } else {
-            // Angle pour marée descendante (de haut en bas)
+            // Angle correct pour une marée descendante (de haut en bas)
             angle = progress * Math.PI;
         }
 
@@ -97,22 +97,18 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
         const markerRadius = radius - 15;
-        const angleStep = Math.PI / 6; // Ecart angulaire pour 5 chiffres
+        const ySpacing = 25; // Espacement vertical entre les chiffres
 
         // Chiffres côté gauche (1 à 5, de haut en bas)
         for (let i = 0; i <= 4; i++) {
-            const angle = (Math.PI / 2) + (i * angleStep);
-            const x = centerX - markerRadius * Math.cos(angle);
-            const y = centerY - markerRadius * Math.sin(angle);
-            ctx.fillText(i + 1, x, y);
+            const y = centerY - (2 * ySpacing) + (i * ySpacing);
+            ctx.fillText(i + 1, centerX - markerRadius, y);
         }
 
-        // Chiffres côté droit (1 à 5, de bas en haut)
+        // Chiffres côté droit (5 à 1, de haut en bas)
         for (let i = 0; i <= 4; i++) {
-            const angle = (3 * Math.PI / 2) - (i * angleStep);
-            const x = centerX + markerRadius * Math.cos(angle);
-            const y = centerY + markerRadius * Math.sin(angle);
-            ctx.fillText(i + 1, x, y);
+            const y = centerY - (2 * ySpacing) + (i * ySpacing);
+            ctx.fillText(5 - i, centerX + markerRadius, y);
         }
         
         // Texte fixe
