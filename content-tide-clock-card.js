@@ -95,7 +95,7 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const markerRadius = radius - 30;
+        const markerRadius = radius - 15;
 
         // Côté GAUCHE (marée montante) : 6 (bas-gauche) → 5 → 4 → 3 → 2 → 1 (haut-gauche)
         // Angles : de 135° (bas-gauche) vers 225° (haut-gauche)
