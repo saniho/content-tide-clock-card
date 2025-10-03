@@ -61,8 +61,9 @@ class TideClockCard extends HTMLElement {
         let progress = elapsed / totalDuration;
         progress = Math.min(1, Math.max(0, progress));
 
-        // Calcul du temps restant en heures
-        const timeRemaining = (nextTide.time.getTime() - now.getTime()) / (60 * 60 * 1000);
+        // Calcul de l'angle par heure (180° divisé par le nombre d'heures du demi-cycle)
+        const totalHours = totalDuration / (60 * 60 * 1000);
+        const degreesPerHour = 180 / totalHours;
 
         // --- 5. Dessin du cadran ---
         const canvas = this.querySelector('#tideClock');
@@ -92,21 +93,21 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const markerRadius = radius - 20;
+        const markerRadius = radius - 30; // Plus loin du bord pour éviter la coupure
 
         // Côté GAUCHE (marée montante) : 5 (bas) → 4 → 3 → 2 → 1 (haut)
-        // Angles de 270° (bas) à 90° (haut) en passant par la gauche
+        // Représente le temps RESTANT avant la marée haute
         for (let i = 1; i <= 5; i++) {
-            const angle = (270 - (i - 1) * 36) * (Math.PI / 180); // 270°, 234°, 198°, 162°, 126°
+            const angle = (270 - (i - 1) * degreesPerHour) * (Math.PI / 180);
             const x = centerX + markerRadius * Math.cos(angle);
             const y = centerY + markerRadius * Math.sin(angle);
             ctx.fillText(6 - i, x, y); // Affiche 5, 4, 3, 2, 1
         }
 
         // Côté DROIT (marée descendante) : 5 (haut) → 4 → 3 → 2 → 1 (bas)
-        // Angles de 90° (haut) à 270° (bas) en passant par la droite
+        // Représente le temps RESTANT avant la marée basse
         for (let i = 1; i <= 5; i++) {
-            const angle = (90 - (i - 1) * 36) * (Math.PI / 180); // 90°, 54°, 18°, -18°, -54°
+            const angle = (90 - (i - 1) * degreesPerHour) * (Math.PI / 180);
             const x = centerX + markerRadius * Math.cos(angle);
             const y = centerY + markerRadius * Math.sin(angle);
             ctx.fillText(6 - i, x, y); // Affiche 5, 4, 3, 2, 1
