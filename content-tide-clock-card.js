@@ -31,7 +31,7 @@ class TideClockCard extends HTMLElement {
         const baseHigh = this.parseTideTime(tideHighRaw, now);
         const baseLow = this.parseTideTime(tideLowRaw, now);
 
-        // Durée moyenne d’un demi-cycle (6h12m30s)
+        // Durée moyenne d'un demi-cycle (6h12m30s)
         const HALF_TIDAL_MS = (6 * 60 * 60 * 1000) + (12.5 * 60 * 1000);
 
         // --- 2. Générer 4 marées sur 24h ---
@@ -60,14 +60,8 @@ class TideClockCard extends HTMLElement {
         let progress = elapsed / totalDuration;
         progress = Math.min(1, Math.max(0, progress));
 
-        let angle;
-        if (isNextTideHigh) {
-            // Angle pour marée montante (de bas en haut)
-            angle = Math.PI - (progress * Math.PI); 
-        } else {
-            // Angle pour marée descendante (de haut en bas)
-            angle = progress * Math.PI;
-        }
+        // Calcul du temps restant en heures
+        const timeRemaining = (nextTide.time.getTime() - now.getTime()) / (60 * 60 * 1000);
 
         // --- 5. Dessin du cadran ---
         const canvas = this.querySelector('#tideClock');
@@ -92,28 +86,27 @@ class TideClockCard extends HTMLElement {
         ctx.strokeStyle = '#FFFFFF';
         ctx.stroke();
 
-        // Chiffres
+        // Calcul des positions des chiffres
         ctx.font = 'bold 16px sans-serif';
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
-        const markerRadius = radius - 15;
-        const totalMinutes = totalDuration / 60000;
-        const anglePerMinute = Math.PI / totalMinutes;
-        
-        // Chiffres côté gauche (Marée descendante, 1 à 5)
+        ctx.textBaseline = 'middle';
+        const markerRadius = radius - 20;
+
+        // Côté DROIT (marée montante) : 5 en haut → 1 en bas
         for (let i = 1; i <= 5; i++) {
-            const angle = (i * 60) * anglePerMinute;
-            const x = centerX - markerRadius * Math.sin(angle);
-            const y = centerY + markerRadius * Math.cos(angle);
-            ctx.fillText(i, x, y);
+            const anglePos = Math.PI - (i / 6) * Math.PI; // De π à π/6
+            const x = centerX + markerRadius * Math.cos(anglePos);
+            const y = centerY - markerRadius * Math.sin(anglePos);
+            ctx.fillText(6 - i, x, y); // Affiche 5, 4, 3, 2, 1
         }
 
-        // Chiffres côté droit (Marée montante, 5 à 1)
+        // Côté GAUCHE (marée descendante) : 1 en haut → 5 en bas
         for (let i = 1; i <= 5; i++) {
-            const angle = (i * 60) * anglePerMinute;
-            const x = centerX + markerRadius * Math.sin(angle);
-            const y = centerY + markerRadius * Math.cos(angle);
-            ctx.fillText(6 - i, x, y);
+            const anglePos = (i / 6) * Math.PI; // De π/6 à π
+            const x = centerX - markerRadius * Math.cos(anglePos);
+            const y = centerY - markerRadius * Math.sin(anglePos);
+            ctx.fillText(6 - i, x, y); // Affiche 5, 4, 3, 2, 1
         }
 
         // Texte fixe
@@ -129,11 +122,21 @@ class TideClockCard extends HTMLElement {
         const tendance = isNextTideHigh ? "Montante" : "Descendante";
         ctx.fillText(tendance, centerX, centerY + 30);
 
+        // Calcul de l'angle de l'aiguille (basé sur le temps restant)
+        let needleAngle;
+        if (isNextTideHigh) {
+            // Marée montante : de bas (0°) vers haut (180°)
+            needleAngle = progress * Math.PI;
+        } else {
+            // Marée descendante : de haut (180°) vers bas (0°)
+            needleAngle = Math.PI - (progress * Math.PI);
+        }
+
         // Aiguille
         ctx.save();
         ctx.translate(centerX, centerY);
-        ctx.rotate(-Math.PI / 2);
-        ctx.rotate(angle);
+        ctx.rotate(-Math.PI / 2); // Référence à midi
+        ctx.rotate(needleAngle);
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo(110, 0);
@@ -159,11 +162,13 @@ class TideClockCard extends HTMLElement {
         ctx.fillRect(centerX - boxWidth/2, centerY - radius + 5, boxWidth, boxHeight);
         ctx.fillStyle = '#000000';
         ctx.font = 'bold 12px sans-serif';
-        ctx.fillText(tideHighRaw, centerX, centerY - radius + 18);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tideHighRaw, centerX, centerY - radius + 15);
+        
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(centerX - boxWidth/2, centerY + radius - 35, boxWidth, boxHeight);
+        ctx.fillRect(centerX - boxWidth/2, centerY + radius - 25, boxWidth, boxHeight);
         ctx.fillStyle = '#000000';
-        ctx.fillText(tideLowRaw, centerX, centerY + radius - 22);
+        ctx.fillText(tideLowRaw, centerX, centerY + radius - 15);
     }
 
     getCardSize() {
