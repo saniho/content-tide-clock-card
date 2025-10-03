@@ -1,0 +1,20 @@
+name: Delete Old Releases
+
+on:
+  push:
+    branches:
+      - main  # ou 'master', selon le nom de votre branche principale
+  schedule:
+    - cron: '0 0 * * *' # Exécute cette action tous les jours à minuit
+
+jobs:
+  delete_old_releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old releases
+        uses: sgpublic/delete-release-action@v1.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_keep_count: 1
+          release_drop: true
+          release_drop_tag: true
