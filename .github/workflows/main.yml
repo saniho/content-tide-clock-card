@@ -1,22 +1,10 @@
-name: Delete Old Releases
-
-on:
-  workflow_dispatch: # Permet de lancer l'action manuellement depuis GitHub
-  push:
-    branches:
-      - main
-  schedule:
-    - cron: '0 0 * * *' # Exécute l'action tous les jours à minuit
-
 jobs:
-  delete_old_releases:
+  delete-old-releases:
     runs-on: ubuntu-latest
     steps:
-      - name: Delete old releases
-        uses: sgpublic/delete-release-action@v1.2
+      - uses: actions/checkout@v3
+      - uses: sgpublic/delete-release-action@v1.3
         with:
-          release-drop: true
-          release-keep-count: 1
-          release-drop-tag: true
+          keep_latest: 5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
