@@ -103,7 +103,7 @@ class TideClockCard extends HTMLElement {
         const endAngleLeft = 270; // haut-gauche
         const angleRangeLeft = endAngleLeft - startAngleLeft;
         
-        for (let i = 0; i < 6; i++) {
+        for (let i = 1; i < 6; i++) {
             const chiffre = 6 - i;
             const angleDegrees = startAngleLeft + (i / 6) * angleRangeLeft;
             const angle = angleDegrees * (Math.PI / 180);
@@ -117,7 +117,7 @@ class TideClockCard extends HTMLElement {
         const startAngleRight = 270; // haut-droite
         const endAngleRight = 90; // bas-droite (on passe par 360°/0°)
         
-        for (let i = 0; i < 6; i++) {
+        for (let i = 1; i < 6; i++) {
             const chiffre = 6 - i;
             const angleDegrees = startAngleRight + (i / 6) * (endAngleRight + 360 - startAngleRight);
             const angle = (angleDegrees % 360) * (Math.PI / 180);
