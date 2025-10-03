@@ -97,22 +97,22 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
         const markerRadius = radius - 15;
-        const yOffset = 18; 
+        const ySpacing = 25; // Espacement vertical entre les chiffres
 
         // Chiffres côté gauche (1 à 5, de haut en bas)
         const leftLabels = ['1', '2', '3', '4', '5'];
         for (let i = 0; i < leftLabels.length; i++) {
-            const y = centerY + (i - 2) * 25;
-            ctx.fillText(leftLabels[i], centerX - markerRadius, y + yOffset);
+            const y = centerY - (2 * ySpacing) + (i * ySpacing);
+            ctx.fillText(leftLabels[i], centerX - markerRadius, y);
         }
 
-        // Chiffres côté droit (1 à 5, de bas en haut)
+        // Chiffres côté droit (5 à 1, de haut en bas)
         const rightLabels = ['5', '4', '3', '2', '1'];
         for (let i = 0; i < rightLabels.length; i++) {
-            const y = centerY + (i - 2) * 25;
-            ctx.fillText(rightLabels[i], centerX + markerRadius, y + yOffset);
+            const y = centerY - (2 * ySpacing) + (i * ySpacing);
+            ctx.fillText(rightLabels[i], centerX + markerRadius, y);
         }
-
+        
         // Texte fixe
         ctx.font = 'bold 12px sans-serif';
         ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 40);
