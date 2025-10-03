@@ -62,9 +62,9 @@ class TideClockCard extends HTMLElement {
 
         let angle;
         if (isNextTideHigh) {
-            angle = (Math.PI / 2) - (progress * Math.PI); 
+            angle = (Math.PI / 2) + (progress * Math.PI); 
         } else {
-            angle = (-Math.PI / 2) + (progress * Math.PI);
+            angle = (Math.PI / 2) - (progress * Math.PI);
         }
 
         // --- 5. Dessin du cadran ---
@@ -91,15 +91,24 @@ class TideClockCard extends HTMLElement {
         ctx.stroke();
 
         // Chiffres
+        const markerRadius = radius - 15;
+        const labels = ['5', '4', '3', '2', '1', '1', '2', '3', '4', '5'];
+        const numLabels = labels.length;
+        const startAngle = Math.PI * 0.7; 
+        const endAngle = Math.PI * 0.3;
+        const angleStep = (endAngle - startAngle) / (numLabels - 1);
+
         ctx.font = 'bold 16px sans-serif';
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
-        const markerRadius = radius - 15;
-        for (let i = 1; i <= 5; i++) {
-            ctx.fillText(i.toString(), centerX - markerRadius, centerY - (i - 3) * 25);
-            ctx.fillText(i.toString(), centerX + markerRadius, centerY + (i - 3) * 25);
-        }
 
+        for (let i = 0; i < numLabels; i++) {
+            const currentAngle = startAngle + i * angleStep;
+            const x = centerX + markerRadius * Math.cos(currentAngle);
+            const y = centerY + markerRadius * Math.sin(currentAngle);
+            ctx.fillText(labels[i], x, y);
+        }
+        
         // Texte fixe
         ctx.font = 'bold 12px sans-serif';
         ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 40);
@@ -116,10 +125,11 @@ class TideClockCard extends HTMLElement {
         // Aiguille
         ctx.save();
         ctx.translate(centerX, centerY);
-        ctx.scale(-1, 1);
+        ctx.rotate(-Math.PI / 2); // Rotation initiale pour que 0° soit en haut
+        ctx.rotate(angle);
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.lineTo(110 * Math.cos(angle), 110 * Math.sin(angle));
+        ctx.lineTo(110, 0);
         ctx.strokeStyle = '#E0B55E';
         ctx.lineWidth = 6;
         ctx.lineCap = 'round';
