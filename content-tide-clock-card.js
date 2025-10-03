@@ -93,22 +93,20 @@ class TideClockCard extends HTMLElement {
         ctx.textBaseline = 'middle';
         const markerRadius = radius - 20;
 
-        // Côté DROIT (marée montante) : 1 (bas) → 2 → 3 → 4 → 5 (haut)
-        // Angle -90° (bas) vers 90° (haut)
-        for (let i = 1; i <= 5; i++) {
-            const angle = -Math.PI / 2 + ((i - 1) / 5) * Math.PI; // De -90° à 90°
+        // Côté DROIT (marée montante) : 5 (haut) → 4 → 3 → 2 → 1 (bas)
+        for (let i = 5; i >= 1; i--) {
+            const angle = Math.PI / 2 - ((5 - i) / 5) * Math.PI; // De 90° à -90°
             const x = centerX + markerRadius * Math.cos(angle);
             const y = centerY - markerRadius * Math.sin(angle);
-            ctx.fillText(i, x, y); // Affiche 1, 2, 3, 4, 5
+            ctx.fillText(i, x, y);
         }
 
-        // Côté GAUCHE (marée descendante) : 5 (haut) → 4 → 3 → 2 → 1 (bas)
-        // Angle 90° (haut) vers 270° (bas)
+        // Côté GAUCHE (marée descendante) : 1 (haut) → 2 → 3 → 4 → 5 (bas)
         for (let i = 1; i <= 5; i++) {
             const angle = Math.PI / 2 + ((i - 1) / 5) * Math.PI; // De 90° à 270°
             const x = centerX + markerRadius * Math.cos(angle);
             const y = centerY - markerRadius * Math.sin(angle);
-            ctx.fillText(6 - i, x, y); // Affiche 5, 4, 3, 2, 1
+            ctx.fillText(i, x, y);
         }
 
         // Texte fixe
