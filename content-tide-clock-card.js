@@ -99,8 +99,8 @@ class TideClockCard extends HTMLElement {
 
         // Côté GAUCHE (marée montante) : 6 (bas-gauche) → 5 → 4 → 3 → 2 → 1 (haut-gauche)
         // Angles : de 135° (bas-gauche) vers 225° (haut-gauche)
-        const startAngleLeft = 135; // bas-gauche
-        const endAngleLeft = 225; // haut-gauche
+        const startAngleLeft = 90; // bas-gauche
+        const endAngleLeft = 270; // haut-gauche
         const angleRangeLeft = endAngleLeft - startAngleLeft;
         
         for (let i = 0; i < 6; i++) {
@@ -114,8 +114,8 @@ class TideClockCard extends HTMLElement {
 
         // Côté DROIT (marée descendante) : 6 (haut-droite) → 5 → 4 → 3 → 2 → 1 (bas-droite)
         // Angles : de 315° (haut-droite) vers 45° (bas-droite)
-        const startAngleRight = 315; // haut-droite
-        const endAngleRight = 45; // bas-droite (on passe par 360°/0°)
+        const startAngleRight = 270; // haut-droite
+        const endAngleRight = 90; // bas-droite (on passe par 360°/0°)
         
         for (let i = 0; i < 6; i++) {
             const chiffre = 6 - i;
