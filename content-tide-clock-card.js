@@ -55,8 +55,9 @@ class TideClockCard extends HTMLElement {
             isNextTideHigh = false;
         }
 
-        // --- 4. Progression ---
+        // --- 3. Progression ---
         const totalDuration = nextTide.time.getTime() - prevTide.time.getTime();
+        const timeRemaining = nextTide.time.getTime() - now.getTime();
         const elapsed = now.getTime() - prevTide.time.getTime();
         let progress = elapsed / totalDuration;
         progress = Math.min(1, Math.max(0, progress));
@@ -64,8 +65,9 @@ class TideClockCard extends HTMLElement {
         // Calcul de l'angle par heure (180° divisé par le nombre d'heures du demi-cycle)
         const totalHours = totalDuration / (60 * 60 * 1000);
         const degreesPerHour = 180 / totalHours;
+        const hoursRemaining = timeRemaining / (60 * 60 * 1000);
 
-        // --- 5. Dessin du cadran ---
+        // --- 4. Dessin du cadran ---
         const canvas = this.querySelector('#tideClock');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -93,24 +95,26 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const markerRadius = radius - 30; // Plus loin du bord pour éviter la coupure
+        const markerRadius = radius - 30;
 
         // Côté GAUCHE (marée montante) : 5 (bas) → 4 → 3 → 2 → 1 (haut)
-        // Représente le temps RESTANT avant la marée haute
-        for (let i = 1; i <= 5; i++) {
-            const angle = (270 - (i - 1) * degreesPerHour) * (Math.PI / 180);
+        // Angle de départ : 270° (bas), angle de fin : 90° (haut)
+        // On compte de 1 à 5 heures depuis le bas
+        for (let hour = 1; hour <= 5; hour++) {
+            const angle = (270 - (hour - 1) * degreesPerHour) * (Math.PI / 180);
             const x = centerX + markerRadius * Math.cos(angle);
             const y = centerY + markerRadius * Math.sin(angle);
-            ctx.fillText(6 - i, x, y); // Affiche 5, 4, 3, 2, 1
+            ctx.fillText(6 - hour, x, y); // 5, 4, 3, 2, 1
         }
 
         // Côté DROIT (marée descendante) : 5 (haut) → 4 → 3 → 2 → 1 (bas)
-        // Représente le temps RESTANT avant la marée basse
-        for (let i = 1; i <= 5; i++) {
-            const angle = (90 - (i - 1) * degreesPerHour) * (Math.PI / 180);
+        // Angle de départ : 90° (haut), angle de fin : 270° (bas)
+        // On compte de 1 à 5 heures depuis le haut
+        for (let hour = 1; hour <= 5; hour++) {
+            const angle = (90 + (hour - 1) * degreesPerHour) * (Math.PI / 180);
             const x = centerX + markerRadius * Math.cos(angle);
             const y = centerY + markerRadius * Math.sin(angle);
-            ctx.fillText(6 - i, x, y); // Affiche 5, 4, 3, 2, 1
+            ctx.fillText(6 - hour, x, y); // 5, 4, 3, 2, 1
         }
 
         // Texte fixe
@@ -126,16 +130,16 @@ class TideClockCard extends HTMLElement {
         const tendance = isNextTideHigh ? "Montante" : "Descendante";
         ctx.fillText(tendance, centerX, centerY + 30);
 
-        // Calcul de l'angle de l'aiguille
+        // Calcul de l'angle de l'aiguille basé sur les heures restantes
         let needleAngle;
         if (isNextTideHigh) {
-            // Marée montante : de 180° (bas) vers 0° (haut) en passant par la GAUCHE (sens antihoraire)
-            // 180° → 270° → 0°
-            needleAngle = (180 + progress * 180) * (Math.PI / 180);
+            // Marée montante : l'aiguille part de 270° (bas) et remonte vers 90° (haut) par la gauche
+            // hoursRemaining diminue de ~6 à 0
+            needleAngle = (270 - (totalHours - hoursRemaining) * degreesPerHour) * (Math.PI / 180);
         } else {
-            // Marée descendante : de 0° (haut) vers 180° (bas) en passant par la DROITE (sens horaire)
-            // 0° → 90° → 180°
-            needleAngle = (progress * 180) * (Math.PI / 180);
+            // Marée descendante : l'aiguille part de 90° (haut) et descend vers 270° (bas) par la droite
+            // hoursRemaining diminue de ~6 à 0
+            needleAngle = (90 + (totalHours - hoursRemaining) * degreesPerHour) * (Math.PI / 180);
         }
 
         // Aiguille
