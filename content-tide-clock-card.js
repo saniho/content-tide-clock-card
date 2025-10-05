@@ -183,18 +183,34 @@ class TideClockCard extends HTMLElement {
         ctx.font = '14px sans-serif';
         ctx.fillText("HORAIRES DES MARÉES", centerX, centerY + 10);
 
+        // Affichage du coefficient si disponible - dans un cadre sous MARÉE HAUTE
+        if (tideCoeff) {
+            const coeffBoxWidth = 35;
+            const coeffBoxHeight = 18;
+            const coeffBoxY = centerY - radius + 55;
+            
+            // Cadre du coefficient
+            ctx.fillStyle = theme.timeBox;
+            ctx.fillRect(centerX - coeffBoxWidth/2, coeffBoxY, coeffBoxWidth, coeffBoxHeight);
+            
+            // Bordure du cadre
+            ctx.strokeStyle = theme.textDynamic;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(centerX - coeffBoxWidth/2, coeffBoxY, coeffBoxWidth, coeffBoxHeight);
+            
+            // Nombre du coefficient
+            ctx.fillStyle = theme.textDynamic;
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(tideCoeff, centerX, coeffBoxY + coeffBoxHeight/2);
+        }
+
         // Texte dynamique Montante/Descendante
         ctx.font = 'bold 14px sans-serif';
         ctx.fillStyle = theme.textDynamic;
+        ctx.textBaseline = 'middle';
         const tendance = isNextTideHigh ? "Montante" : "Descendante";
         ctx.fillText(tendance, centerX, centerY + 30);
-
-        // Affichage du coefficient si disponible
-        if (tideCoeff) {
-            ctx.font = 'bold 18px sans-serif';
-            ctx.fillStyle = theme.textDynamic;
-            ctx.fillText(`Coeff. ${tideCoeff}`, centerX, centerY + 50);
-        }
 
         // Calcul de l'angle de l'aiguille basé sur les heures écoulées
         const hoursElapsed = elapsed / (60 * 60 * 1000);
