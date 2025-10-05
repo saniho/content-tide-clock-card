@@ -6,6 +6,13 @@ class TideClockCard extends HTMLElement {
     }
 
     setConfig(config) {
+        if (!config.tide_high) {
+            throw new Error('Vous devez définir une entité tide_high');
+        }
+        if (!config.tide_low) {
+            throw new Error('Vous devez définir une entité tide_low');
+        }
+        
         this.config = config;
         this.innerHTML = `
             <ha-card style="background: #e0e0e0; padding: 20px;">
@@ -192,6 +199,91 @@ class TideClockCard extends HTMLElement {
     getCardSize() {
         return 5;
     }
+
+    // Configuration UI
+    static getConfigElement() {
+        return document.createElement("tide-clock-card-editor");
+    }
+
+    static getStubConfig() {
+        return {
+            tide_high: "",
+            tide_low: ""
+        };
+    }
+}
+
+// Éditeur de configuration
+class TideClockCardEditor extends HTMLElement {
+    setConfig(config) {
+        this._config = config;
+        this.render();
+    }
+
+    configChanged(newConfig) {
+        const event = new Event('config-changed', {
+            bubbles: true,
+            composed: true
+        });
+        event.detail = { config: newConfig };
+        this.dispatchEvent(event);
+    }
+
+    render() {
+        if (!this._config) return;
+
+        this.innerHTML = `
+            <div style="padding: 20px;">
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">
+                        Entité marée haute :
+                    </label>
+                    <input 
+                        type="text" 
+                        id="tide_high" 
+                        value="${this._config.tide_high || ''}"
+                        placeholder="sensor.maree_haute"
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+                    />
+                    <small style="color: #666; display: block; margin-top: 4px;">
+                        Exemple: sensor.maree_haute
+                    </small>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">
+                        Entité marée basse :
+                    </label>
+                    <input 
+                        type="text" 
+                        id="tide_low" 
+                        value="${this._config.tide_low || ''}"
+                        placeholder="sensor.maree_basse"
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+                    />
+                    <small style="color: #666; display: block; margin-top: 4px;">
+                        Exemple: sensor.maree_basse
+                    </small>
+                </div>
+            </div>
+        `;
+
+        // Gestion des événements
+        this.querySelector('#tide_high').addEventListener('input', (e) => {
+            this._config = { ...this._config, tide_high: e.target.value };
+            this.configChanged(this._config);
+        });
+
+        this.querySelector('#tide_low').addEventListener('input', (e) => {
+            this._config = { ...this._config, tide_low: e.target.value };
+            this.configChanged(this._config);
+        });
+    }
+
+    set hass(hass) {
+        this._hass = hass;
+    }
 }
 
 customElements.define('tide-clock-card', TideClockCard);
+customElements.define('tide-clock-card-editor', TideClockCardEditor);
