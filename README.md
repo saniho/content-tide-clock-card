@@ -2,7 +2,7 @@
 
 Une carte Home Assistant personnalisée qui affiche une horloge des marées avec une interface visuelle élégante inspirée des horloges de marée traditionnelles.
 
-![Tide Clock Card](./images/tide-clock-preview.png)
+![Tide Clock Card](./tide-clock-preview.png)
 *Exemple d'affichage de l'horloge des marées*
 
 ## ✨ Fonctionnalités
