@@ -36,6 +36,22 @@ class TideClockCard extends HTMLElement {
     set hass(hass) {
         const tideHighRaw = hass.states[this.config.tide_high]?.state ?? null;
         const tideLowRaw = hass.states[this.config.tide_low]?.state ?? null;
+        
+        // Récupération du coefficient - peut être une entité ou un attribut
+        let tideCoeff = null;
+        if (this.config.tide_coeff) {
+            // Vérifier si c'est un attribut (format: entity_id.attribute)
+            if (this.config.tide_coeff.includes('.') && this.config.tide_coeff.split('.').length === 3) {
+                const parts = this.config.tide_coeff.split('.');
+                const entityId = `${parts[0]}.${parts[1]}`;
+                const attrName = parts[2];
+                tideCoeff = hass.states[entityId]?.attributes?.[attrName];
+            } else {
+                // C'est une entité séparée
+                tideCoeff = hass.states[this.config.tide_coeff]?.state;
+            }
+        }
+        
         const now = new Date();
 
         if (!tideHighRaw || !tideLowRaw) {
@@ -188,6 +204,13 @@ class TideClockCard extends HTMLElement {
         const tendance = isNextTideHigh ? "Montante" : "Descendante";
         ctx.fillText(tendance, centerX, centerY + 30);
 
+        // Affichage du coefficient si disponible
+        if (tideCoeff) {
+            ctx.font = 'bold 18px sans-serif';
+            ctx.fillStyle = theme.textDynamic;
+            ctx.fillText(`Coeff. ${tideCoeff}`, centerX, centerY + 50);
+        }
+
         // Calcul de l'angle de l'aiguille basé sur les heures écoulées
         const hoursElapsed = elapsed / (60 * 60 * 1000);
         let needleAngle;
@@ -251,6 +274,7 @@ class TideClockCard extends HTMLElement {
         return {
             tide_high: "",
             tide_low: "",
+            tide_coeff: "",
             theme: "classic"
         };
     }
@@ -356,6 +380,28 @@ class TideClockCardEditor extends HTMLElement {
                         L'entité doit retourner une heure au format HH:MM
                     </small>
                 </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">
+                        Entité coefficient (optionnel) :
+                    </label>
+                    <select 
+                        id="tide_coeff_select"
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 8px;"
+                    >
+                        ${createOptions(this._config.tide_coeff)}
+                    </select>
+                    <input 
+                        type="text" 
+                        id="tide_coeff_input" 
+                        value="${this._config.tide_coeff || ''}"
+                        placeholder="sensor.coefficient_maree"
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; display: none;"
+                    />
+                    <small style="color: #666; display: block; margin-top: 4px;">
+                        Affiche le coefficient de la prochaine marée
+                    </small>
+                </div>
             </div>
         `;
 
@@ -435,6 +481,42 @@ class TideClockCardEditor extends HTMLElement {
                 tideLowSelect.style.display = 'block';
                 tideLowInput.style.display = 'none';
                 tideLowSelect.value = '';
+            }
+        });
+
+        // Gestion coefficient
+        const tideCoeffSelect = this.querySelector('#tide_coeff_select');
+        const tideCoeffInput = this.querySelector('#tide_coeff_input');
+        
+        // Vérifier si on doit afficher le champ manuel au chargement
+        if (this._config.tide_coeff && !entities.includes(this._config.tide_coeff)) {
+            tideCoeffSelect.value = 'custom';
+            tideCoeffSelect.style.display = 'none';
+            tideCoeffInput.style.display = 'block';
+        }
+
+        tideCoeffSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'custom') {
+                tideCoeffSelect.style.display = 'none';
+                tideCoeffInput.style.display = 'block';
+                tideCoeffInput.focus();
+            } else {
+                this._config = { ...this._config, tide_coeff: e.target.value };
+                this.configChanged(this._config);
+            }
+        });
+
+        tideCoeffInput.addEventListener('input', (e) => {
+            this._config = { ...this._config, tide_coeff: e.target.value };
+            this.configChanged(this._config);
+        });
+
+        tideCoeffInput.addEventListener('blur', (e) => {
+            // Si le champ est vide, revenir au select
+            if (!e.target.value) {
+                tideCoeffSelect.style.display = 'block';
+                tideCoeffInput.style.display = 'none';
+                tideCoeffSelect.value = '';
             }
         });
     }
