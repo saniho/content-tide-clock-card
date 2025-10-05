@@ -49,6 +49,10 @@ class TideClockCard extends HTMLElement {
         // --- 1. Marée haute/basse données (ce sont les PROCHAINES marées) ---
         let nextHigh = this.parseTideTime(tideHighRaw, now);
         let nextLow = this.parseTideTime(tideLowRaw, now);
+        
+        // Si l'heure est passée aujourd'hui, c'est pour demain
+        if (nextHigh < now) nextHigh = new Date(nextHigh.getTime() + 24 * 60 * 60 * 1000);
+        if (nextLow < now) nextLow = new Date(nextLow.getTime() + 24 * 60 * 60 * 1000);
 
         // Durée moyenne d'un demi-cycle (6h12m30s)
         const HALF_TIDAL_MS = (6 * 60 * 60 * 1000) + (12.5 * 60 * 1000);
@@ -145,9 +149,8 @@ class TideClockCard extends HTMLElement {
         const markerRadius = radius - 15;
 
         // Côté GAUCHE (marée montante) : 6 (bas-gauche) → 5 → 4 → 3 → 2 → 1 (haut-gauche)
-        // Angles : de 135° (bas-gauche) vers 225° (haut-gauche)
-        const startAngleLeft = 90; // bas-gauche
-        const endAngleLeft = 270; // haut-gauche
+        const startAngleLeft = 90;
+        const endAngleLeft = 270;
         const angleRangeLeft = endAngleLeft - startAngleLeft;
         
         for (let i = 1; i < 6; i++) {
@@ -160,9 +163,8 @@ class TideClockCard extends HTMLElement {
         }
 
         // Côté DROIT (marée descendante) : 6 (haut-droite) → 5 → 4 → 3 → 2 → 1 (bas-droite)
-        // Angles : de 315° (haut-droite) vers 45° (bas-droite)
-        const startAngleRight = 270; // haut-droite
-        const endAngleRight = 90; // bas-droite (on passe par 360°/0°)
+        const startAngleRight = 270;
+        const endAngleRight = 90;
         
         for (let i = 1; i < 6; i++) {
             const chiffre = 6 - i;
@@ -248,7 +250,6 @@ class TideClockCard extends HTMLElement {
         return 5;
     }
 
-    // Configuration UI
     static getConfigElement() {
         return document.createElement("tide-clock-card-editor");
     }
@@ -288,7 +289,6 @@ class TideClockCardEditor extends HTMLElement {
 
         const entities = this.getEntitiesList();
         
-        // Création des options pour les selects
         const createOptions = (selectedValue) => {
             let options = '<option value="">-- Sélectionner une entité --</option>';
             entities.forEach(entity => {
@@ -341,7 +341,7 @@ class TideClockCardEditor extends HTMLElement {
                     </small>
                 </div>
 
-                <div style="margin-bottom: 16px;">
+                <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 500;">
                         Entité marée basse :
                     </label>
@@ -369,14 +369,6 @@ class TideClockCardEditor extends HTMLElement {
                     </small>
                 </div>
             </div>
-        `;top: 4px;">
-                        Entité séparée (ex: sensor.coefficient) ou attribut (ex: sensor.maree_haute.coefficient)
-                    </small>
-                </div>top: 4px;">
-                        Affiche le coefficient de la prochaine marée
-                    </small>
-                </div>
-            </div>
         `;
 
         // Gestion du thème
@@ -390,7 +382,6 @@ class TideClockCardEditor extends HTMLElement {
         const tideHighSelect = this.querySelector('#tide_high_select');
         const tideHighInput = this.querySelector('#tide_high_input');
         
-        // Vérifier si on doit afficher le champ manuel au chargement
         if (this._config.tide_high && !entities.includes(this._config.tide_high)) {
             tideHighSelect.value = 'custom';
             tideHighSelect.style.display = 'none';
@@ -414,7 +405,6 @@ class TideClockCardEditor extends HTMLElement {
         });
 
         tideHighInput.addEventListener('blur', (e) => {
-            // Si le champ est vide, revenir au select
             if (!e.target.value) {
                 tideHighSelect.style.display = 'block';
                 tideHighInput.style.display = 'none';
@@ -426,7 +416,6 @@ class TideClockCardEditor extends HTMLElement {
         const tideLowSelect = this.querySelector('#tide_low_select');
         const tideLowInput = this.querySelector('#tide_low_input');
         
-        // Vérifier si on doit afficher le champ manuel au chargement
         if (this._config.tide_low && !entities.includes(this._config.tide_low)) {
             tideLowSelect.value = 'custom';
             tideLowSelect.style.display = 'none';
@@ -450,7 +439,6 @@ class TideClockCardEditor extends HTMLElement {
         });
 
         tideLowInput.addEventListener('blur', (e) => {
-            // Si le champ est vide, revenir au select
             if (!e.target.value) {
                 tideLowSelect.style.display = 'block';
                 tideLowInput.style.display = 'none';
