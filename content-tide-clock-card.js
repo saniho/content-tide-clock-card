@@ -189,18 +189,14 @@ class TideClockCard extends HTMLElement {
             const coeffBoxHeight = 18;
             const coeffBoxY = centerY - radius + 55;
             
-            // Cadre du coefficient
+            // Cadre du coefficient (même style que les horaires)
             ctx.fillStyle = theme.timeBox;
             ctx.fillRect(centerX - coeffBoxWidth/2, coeffBoxY, coeffBoxWidth, coeffBoxHeight);
             
-            // Bordure du cadre
-            ctx.strokeStyle = theme.textDynamic;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(centerX - coeffBoxWidth/2, coeffBoxY, coeffBoxWidth, coeffBoxHeight);
-            
             // Nombre du coefficient
-            ctx.fillStyle = theme.textDynamic;
+            ctx.fillStyle = theme.timeText;
             ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(tideCoeff, centerX, coeffBoxY + coeffBoxHeight/2);
         }
@@ -208,6 +204,7 @@ class TideClockCard extends HTMLElement {
         // Texte dynamique Montante/Descendante
         ctx.font = 'bold 14px sans-serif';
         ctx.fillStyle = theme.textDynamic;
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const tendance = isNextTideHigh ? "Montante" : "Descendante";
         ctx.fillText(tendance, centerX, centerY + 30);
