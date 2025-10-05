@@ -437,8 +437,7 @@ class TideClockCardEditor extends HTMLElement {
                 tideLowSelect.value = '';
             }
         });
-    } pour les selects
-
+    }
 
     set hass(hass) {
         this._hass = hass;
