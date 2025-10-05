@@ -43,6 +43,9 @@ class TideClockCard extends HTMLElement {
             return;
         }
 
+        // Récupérer le coefficient depuis l'attribut de la marée haute
+        const tideCoeff = hass.states[this.config.tide_high]?.attributes?.coeff ?? null;
+
         // --- 1. Marée haute/basse données (ce sont les PROCHAINES marées) ---
         let nextHigh = this.parseTideTime(tideHighRaw, now);
         let nextLow = this.parseTideTime(tideLowRaw, now);
@@ -146,9 +149,8 @@ class TideClockCard extends HTMLElement {
         const markerRadius = radius - 15;
 
         // Côté GAUCHE (marée montante) : 6 (bas-gauche) → 5 → 4 → 3 → 2 → 1 (haut-gauche)
-        // Angles : de 135° (bas-gauche) vers 225° (haut-gauche)
-        const startAngleLeft = 90; // bas-gauche
-        const endAngleLeft = 270; // haut-gauche
+        const startAngleLeft = 90;
+        const endAngleLeft = 270;
         const angleRangeLeft = endAngleLeft - startAngleLeft;
         
         for (let i = 1; i < 6; i++) {
@@ -161,9 +163,8 @@ class TideClockCard extends HTMLElement {
         }
 
         // Côté DROIT (marée descendante) : 6 (haut-droite) → 5 → 4 → 3 → 2 → 1 (bas-droite)
-        // Angles : de 315° (haut-droite) vers 45° (bas-droite)
-        const startAngleRight = 270; // haut-droite
-        const endAngleRight = 90; // bas-droite (on passe par 360°/0°)
+        const startAngleRight = 270;
+        const endAngleRight = 90;
         
         for (let i = 1; i < 6; i++) {
             const chiffre = 6 - i;
@@ -182,9 +183,29 @@ class TideClockCard extends HTMLElement {
         ctx.font = '14px sans-serif';
         ctx.fillText("HORAIRES DES MARÉES", centerX, centerY + 10);
 
+        // Affichage du coefficient si disponible - dans un cadre sous MARÉE HAUTE
+        if (tideCoeff) {
+            const coeffBoxWidth = 35;
+            const coeffBoxHeight = 18;
+            const coeffBoxY = centerY - radius + 55;
+            
+            // Cadre du coefficient (même style que les horaires)
+            ctx.fillStyle = theme.timeBox;
+            ctx.fillRect(centerX - coeffBoxWidth/2, coeffBoxY, coeffBoxWidth, coeffBoxHeight);
+            
+            // Nombre du coefficient
+            ctx.fillStyle = theme.timeText;
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(tideCoeff, centerX, coeffBoxY + coeffBoxHeight/2);
+        }
+
         // Texte dynamique Montante/Descendante
         ctx.font = 'bold 14px sans-serif';
         ctx.fillStyle = theme.textDynamic;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         const tendance = isNextTideHigh ? "Montante" : "Descendante";
         ctx.fillText(tendance, centerX, centerY + 30);
 
@@ -242,7 +263,6 @@ class TideClockCard extends HTMLElement {
         return 5;
     }
 
-    // Configuration UI
     static getConfigElement() {
         return document.createElement("tide-clock-card-editor");
     }
@@ -282,7 +302,6 @@ class TideClockCardEditor extends HTMLElement {
 
         const entities = this.getEntitiesList();
         
-        // Création des options pour les selects
         const createOptions = (selectedValue) => {
             let options = '<option value="">-- Sélectionner une entité --</option>';
             entities.forEach(entity => {
@@ -335,7 +354,7 @@ class TideClockCardEditor extends HTMLElement {
                     </small>
                 </div>
 
-                <div style="margin-bottom: 16px;">
+                <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 500;">
                         Entité marée basse :
                     </label>
@@ -356,6 +375,12 @@ class TideClockCardEditor extends HTMLElement {
                         L'entité doit retourner une heure au format HH:MM
                     </small>
                 </div>
+
+                <div style="margin-top: 16px; padding: 12px; background-color: #f0f8ff; border-left: 4px solid #0066CC; border-radius: 4px;">
+                    <small style="color: #333;">
+                        ℹ️ <strong>Info :</strong> Le coefficient sera automatiquement lu depuis l'attribut <code>coeff</code> de l'entité marée haute.
+                    </small>
+                </div>
             </div>
         `;
 
@@ -370,7 +395,6 @@ class TideClockCardEditor extends HTMLElement {
         const tideHighSelect = this.querySelector('#tide_high_select');
         const tideHighInput = this.querySelector('#tide_high_input');
         
-        // Vérifier si on doit afficher le champ manuel au chargement
         if (this._config.tide_high && !entities.includes(this._config.tide_high)) {
             tideHighSelect.value = 'custom';
             tideHighSelect.style.display = 'none';
@@ -394,7 +418,6 @@ class TideClockCardEditor extends HTMLElement {
         });
 
         tideHighInput.addEventListener('blur', (e) => {
-            // Si le champ est vide, revenir au select
             if (!e.target.value) {
                 tideHighSelect.style.display = 'block';
                 tideHighInput.style.display = 'none';
@@ -406,7 +429,6 @@ class TideClockCardEditor extends HTMLElement {
         const tideLowSelect = this.querySelector('#tide_low_select');
         const tideLowInput = this.querySelector('#tide_low_input');
         
-        // Vérifier si on doit afficher le champ manuel au chargement
         if (this._config.tide_low && !entities.includes(this._config.tide_low)) {
             tideLowSelect.value = 'custom';
             tideLowSelect.style.display = 'none';
@@ -430,7 +452,6 @@ class TideClockCardEditor extends HTMLElement {
         });
 
         tideLowInput.addEventListener('blur', (e) => {
-            // Si le champ est vide, revenir au select
             if (!e.target.value) {
                 tideLowSelect.style.display = 'block';
                 tideLowInput.style.display = 'none';
