@@ -113,6 +113,22 @@ class TideClockCard extends HTMLElement {
                 centerInner: '#FFFFFF',
                 timeBox: '#F0F0F0',
                 timeText: '#000000'
+            },
+            maritime: {
+                border: '#E8E8E8',
+                dial: '#F5F5F5',
+                dialStroke: '#1A237E',
+                numbers: '#000000',
+                textFixed: '#000000',
+                textDynamic: '#1A237E',
+                needle: '#000000',
+                needleSecondary: '#D4AF37',
+                center: '#1A237E',
+                centerInner: '#FFFFFF',
+                timeBox: '#FFFFFF',
+                timeText: '#000000',
+                sectorColor: '#1A4D7C',
+                highlightColor: '#D32F2F'
             }
         };
 
@@ -139,14 +155,63 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = theme.dial;
         ctx.fill();
         ctx.strokeStyle = theme.dialStroke;
+        ctx.lineWidth = 2;
         ctx.stroke();
+
+        // Pour le thème maritime, ajouter les secteurs bleus
+        if (this.config.theme === 'maritime') {
+            // Secteur gauche (montante)
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius - 25, Math.PI/2, 3*Math.PI/2, false);
+            ctx.closePath();
+            ctx.fillStyle = theme.sectorColor;
+            ctx.globalAlpha = 0.15;
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+
+            // Secteur droit (descendante)
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius - 25, -Math.PI/2, Math.PI/2, false);
+            ctx.closePath();
+            ctx.fillStyle = theme.sectorColor;
+            ctx.globalAlpha = 0.15;
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+
+            // Dessiner les barres de séparation des heures
+            for (let i = 1; i <= 5; i++) {
+                // Côté gauche
+                const angleLeft = (90 + (i * 30)) * (Math.PI / 180);
+                ctx.beginPath();
+                ctx.moveTo(centerX + (radius - 55) * Math.cos(angleLeft), 
+                          centerY + (radius - 55) * Math.sin(angleLeft));
+                ctx.lineTo(centerX + (radius - 25) * Math.cos(angleLeft), 
+                          centerY + (radius - 25) * Math.sin(angleLeft));
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Côté droit
+                const angleRight = (270 + (i * 30)) * (Math.PI / 180);
+                ctx.beginPath();
+                ctx.moveTo(centerX + (radius - 55) * Math.cos(angleRight), 
+                          centerY + (radius - 55) * Math.sin(angleRight));
+                ctx.lineTo(centerX + (radius - 25) * Math.cos(angleRight), 
+                          centerY + (radius - 25) * Math.sin(angleRight));
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
 
         // Calcul des positions des chiffres
         ctx.font = 'bold 16px sans-serif';
         ctx.fillStyle = theme.numbers;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const markerRadius = radius - 15;
+        const markerRadius = this.config.theme === 'maritime' ? radius - 40 : radius - 15;
 
         // Côté GAUCHE (marée montante) : 6 (bas-gauche) → 5 → 4 → 3 → 2 → 1 (haut-gauche)
         const startAngleLeft = 90;
@@ -180,20 +245,21 @@ class TideClockCard extends HTMLElement {
         ctx.fillStyle = theme.textFixed;
         ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 40);
         ctx.fillText("MARÉE BASSE", centerX, centerY + radius - 40);
-        ctx.font = '14px sans-serif';
-        ctx.fillText("HORAIRES DES MARÉES", centerX, centerY + 10);
+        
+        if (this.config.theme !== 'maritime') {
+            ctx.font = '14px sans-serif';
+            ctx.fillText("HORAIRES DES MARÉES", centerX, centerY + 10);
+        }
 
-        // Affichage du coefficient si disponible - dans un cadre sous MARÉE HAUTE
+        // Affichage du coefficient si disponible
         if (tideCoeff) {
             const coeffBoxWidth = 35;
             const coeffBoxHeight = 18;
             const coeffBoxY = centerY - radius + 55;
             
-            // Cadre du coefficient (même style que les horaires)
             ctx.fillStyle = theme.timeBox;
             ctx.fillRect(centerX - coeffBoxWidth/2, coeffBoxY, coeffBoxWidth, coeffBoxHeight);
             
-            // Nombre du coefficient
             ctx.fillStyle = theme.timeText;
             ctx.font = 'bold 14px sans-serif';
             ctx.textAlign = 'center';
@@ -202,22 +268,21 @@ class TideClockCard extends HTMLElement {
         }
 
         // Texte dynamique Montante/Descendante
+        const tendanceY = this.config.theme === 'maritime' ? centerY - 10 : centerY + 30;
         ctx.font = 'bold 14px sans-serif';
         ctx.fillStyle = theme.textDynamic;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const tendance = isNextTideHigh ? "Montante" : "Descendante";
-        ctx.fillText(tendance, centerX, centerY + 30);
+        ctx.fillText(tendance, centerX, tendanceY);
 
         // Calcul de l'angle de l'aiguille basé sur les heures écoulées
         const hoursElapsed = elapsed / (60 * 60 * 1000);
         let needleAngle;
         
         if (isNextTideHigh) {
-            // Marée montante : l'aiguille part de 90° (bas) et va vers 270° (haut) par la gauche
             needleAngle = (90 + hoursElapsed * degreesPerHour) * (Math.PI / 180);
         } else {
-            // Marée descendante : l'aiguille part de 270° (haut) et va vers 90° (bas) par la droite
             needleAngle = (270 + hoursElapsed * degreesPerHour) * (Math.PI / 180);
         }
 
@@ -225,6 +290,8 @@ class TideClockCard extends HTMLElement {
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.rotate(needleAngle);
+        
+        // Aiguille principale (noire)
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo(110, 0);
@@ -232,6 +299,18 @@ class TideClockCard extends HTMLElement {
         ctx.lineWidth = 6;
         ctx.lineCap = 'round';
         ctx.stroke();
+        
+        // Pour le thème maritime, ajouter une aiguille secondaire dorée
+        if (this.config.theme === 'maritime') {
+            ctx.beginPath();
+            ctx.moveTo(-15, 0);
+            ctx.lineTo(90, 0);
+            ctx.strokeStyle = theme.needleSecondary || '#D4AF37';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+        
         ctx.restore();
 
         // Centre
@@ -326,6 +405,7 @@ class TideClockCardEditor extends HTMLElement {
                     >
                         <option value="classic" ${currentTheme === 'classic' ? 'selected' : ''}>🌊 Classic (Bleu marine)</option>
                         <option value="light" ${currentTheme === 'light' ? 'selected' : ''}>☀️ Light (Fond blanc)</option>
+                        <option value="maritime" ${currentTheme === 'maritime' ? 'selected' : ''}>⚓ Maritime (Style horloge nautique)</option>
                     </select>
                     <small style="color: #666; display: block; margin-top: 4px;">
                         Choisissez le style visuel de votre horloge des marées
