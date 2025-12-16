@@ -21,6 +21,8 @@ class TideClockCard extends HTMLElement {
         };
         
         const sizes = {
+            tiny: { canvas: 150, padding: 10 },
+            xsmall: { canvas: 200, padding: 12 },
             small: { canvas: 250, padding: 15 },
             medium: { canvas: 300, padding: 20 },
             large: { canvas: 400, padding: 25 },
@@ -205,6 +207,8 @@ class TideClockCard extends HTMLElement {
         const theme = themes[this.config.theme] || themes.classic;
 
         const sizes = {
+            tiny: { canvas: 150, center: 75, radius: 67, outer: 75, font: 10, fontSmall: 8, fontMedium: 9 },
+            xsmall: { canvas: 200, center: 100, radius: 90, outer: 100, font: 12, fontSmall: 9, fontMedium: 10 },
             small: { canvas: 250, center: 125, radius: 112, outer: 125, font: 14, fontSmall: 10, fontMedium: 12 },
             medium: { canvas: 300, center: 150, radius: 135, outer: 150, font: 16, fontSmall: 12, fontMedium: 14 },
             large: { canvas: 400, center: 200, radius: 180, outer: 200, font: 22, fontSmall: 16, fontMedium: 18 },
