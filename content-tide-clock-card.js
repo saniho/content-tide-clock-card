@@ -13,15 +13,12 @@ class TideClockCard extends HTMLElement {
             throw new Error('Vous devez définir une entité tide_low');
         }
         
-        if (!config.theme) {
-            config.theme = 'classic';
-        }
-        
-        if (!config.size) {
-            config.size = 'medium';
-        }
-        
-        this.config = config;
+        // Créer une copie modifiable de la config
+        this.config = {
+            ...config,
+            theme: config.theme || 'classic',
+            size: config.size || 'medium'
+        };
         
         const sizes = {
             small: { canvas: 250, padding: 15 },
