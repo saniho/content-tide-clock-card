@@ -13,19 +13,35 @@ class TideClockCard extends HTMLElement {
             throw new Error('Vous devez définir une entité tide_low');
         }
         
-        // Définir un thème par défaut si non spécifié
-        if (!config.theme) {
-            config.theme = 'classic';
-        }
+        // Créer une copie modifiable de la config
+        this.config = {
+            ...config,
+            theme: config.theme || 'classic',
+            size: config.size || 'medium'
+        };
         
-        this.config = config;
+        const sizes = {
+            tiny: { canvas: 150, padding: 10 },
+            xsmall: { canvas: 200, padding: 12 },
+            small: { canvas: 250, padding: 15 },
+            medium: { canvas: 300, padding: 20 },
+            large: { canvas: 400, padding: 25 },
+            xlarge: { canvas: 500, padding: 30 }
+        };
         
-        // Couleur de fond selon le thème
-        const bgColor = config.theme === 'light' ? '#ffffff' : '#e0e0e0';
+        const sizeConfig = sizes[config.size] || sizes.medium;
+        
+        const bgColors = {
+            classic: '#e0e0e0',
+            light: '#ffffff',
+            maritime: '#e0e0e0',
+            dark: '#1a1a1a'
+        };
+        const bgColor = bgColors[config.theme] || '#e0e0e0';
         
         this.innerHTML = `
-            <ha-card style="background: ${bgColor}; padding: 20px;">
-                <canvas id="tideClock" width="300" height="300"></canvas>
+            <ha-card style="background: ${bgColor}; padding: ${sizeConfig.padding}px;">
+                <canvas id="tideClock" width="${sizeConfig.canvas}" height="${sizeConfig.canvas}"></canvas>
             </ha-card>
             <style>
                 canvas { display: block; margin: auto; }
@@ -45,31 +61,26 @@ class TideClockCard extends HTMLElement {
                 ctx.fillStyle = '#D32F2F';
                 ctx.fillRect(-w/2, -h/2, w, h);
                 break;
-                
             case 'yellow':
                 ctx.fillStyle = '#FBC02D';
                 ctx.fillRect(-w/2, -h/2, w, h);
                 break;
-                
             case 'blue':
                 ctx.fillStyle = '#1976D2';
                 ctx.fillRect(-w/2, -h/2, w, h);
                 break;
-                
             case 'split-red-white':
                 ctx.fillStyle = '#D32F2F';
                 ctx.fillRect(-w/2, -h/2, w/2, h);
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fillRect(0, -h/2, w/2, h);
                 break;
-                
             case 'split-blue-yellow':
                 ctx.fillStyle = '#1976D2';
                 ctx.fillRect(-w/2, -h/2, w/2, h);
                 ctx.fillStyle = '#FBC02D';
                 ctx.fillRect(0, -h/2, w/2, h);
                 break;
-                
             case 'tricolor':
                 ctx.fillStyle = '#1976D2';
                 ctx.fillRect(-w/2, -h/2, w, h/3);
@@ -78,7 +89,6 @@ class TideClockCard extends HTMLElement {
                 ctx.fillStyle = '#D32F2F';
                 ctx.fillRect(-w/2, -h/2 + 2*h/3, w, h/3);
                 break;
-                
             case 'cross':
                 ctx.fillStyle = '#D32F2F';
                 ctx.fillRect(-w/2, -h/2, w, h);
@@ -91,7 +101,6 @@ class TideClockCard extends HTMLElement {
         ctx.strokeStyle = '#333333';
         ctx.lineWidth = 0.5;
         ctx.strokeRect(-w/2, -h/2, w, h);
-        
         ctx.restore();
     }
 
@@ -101,7 +110,7 @@ class TideClockCard extends HTMLElement {
         const now = new Date();
 
         if (!tideHighRaw || !tideLowRaw) {
-            this.innerHTML = `<ha-card><div style="padding:1em; color: black; text-align: center;">Erreur: Entités marée non disponibles.</div></ha-card>`;
+            this.innerHTML = `<ha-card><div style="padding:1em; color: ${this.config.theme === 'dark' ? 'white' : 'black'}; text-align: center;">Erreur: Entités marée non disponibles.</div></ha-card>`;
             return;
         }
 
@@ -135,7 +144,6 @@ class TideClockCard extends HTMLElement {
 
         const totalHours = totalDuration / (60 * 60 * 1000);
         const degreesPerHour = 180 / totalHours;
-        const hoursRemaining = timeRemaining / (60 * 60 * 1000);
 
         const themes = {
             classic: {
@@ -179,49 +187,71 @@ class TideClockCard extends HTMLElement {
                 timeText: '#000000',
                 sectorColor: '#1A4D7C',
                 triangleColor: '#1A237E'
+            },
+            dark: {
+                border: '#2a2a2a',
+                dial: '#0d0d0d',
+                dialStroke: '#404040',
+                numbers: '#e0e0e0',
+                textFixed: '#b0b0b0',
+                textDynamic: '#00d4ff',
+                needle: '#00d4ff',
+                needleGlow: 'rgba(0, 212, 255, 0.5)',
+                center: '#00d4ff',
+                centerInner: '#0d0d0d',
+                timeBox: '#1a1a1a',
+                timeText: '#e0e0e0'
             }
         };
 
         const theme = themes[this.config.theme] || themes.classic;
 
+        const sizes = {
+            tiny: { canvas: 150, center: 75, radius: 67, outer: 75, font: 10, fontSmall: 8, fontMedium: 9 },
+            xsmall: { canvas: 200, center: 100, radius: 90, outer: 100, font: 12, fontSmall: 9, fontMedium: 10 },
+            small: { canvas: 250, center: 125, radius: 112, outer: 125, font: 14, fontSmall: 10, fontMedium: 12 },
+            medium: { canvas: 300, center: 150, radius: 135, outer: 150, font: 16, fontSmall: 12, fontMedium: 14 },
+            large: { canvas: 400, center: 200, radius: 180, outer: 200, font: 22, fontSmall: 16, fontMedium: 18 },
+            xlarge: { canvas: 500, center: 250, radius: 225, outer: 250, font: 28, fontSmall: 20, fontMedium: 24 }
+        };
+        
+        const size = sizes[this.config.size] || sizes.medium;
+        const scaleFactor = size.canvas / 300;
+
         const canvas = this.querySelector('#tideClock');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
-        const centerX = 150, centerY = 150;
-        const radius = 135, outerRadius = 150;
+        const centerX = size.center, centerY = size.center;
+        const radius = size.radius, outerRadius = size.outer;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Bordure extérieure
         ctx.beginPath();
         ctx.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI);
         ctx.fillStyle = theme.border;
         ctx.fill();
 
-        // Anneau blanc pour les triangles (thème maritime uniquement)
+        if (this.config.theme === 'dark') {
+            ctx.shadowColor = 'rgba(0, 212, 255, 0.3)';
+            ctx.shadowBlur = 15 * scaleFactor;
+        }
+
         if (this.config.theme === 'maritime') {
             ctx.beginPath();
-            ctx.arc(centerX, centerY, radius + 5, 0, 2 * Math.PI);
+            ctx.arc(centerX, centerY, radius + 5 * scaleFactor, 0, 2 * Math.PI);
             ctx.fillStyle = '#FFFFFF';
             ctx.fill();
 
-            // Drapeaux nautiques
             const flags = [
-                { angle: 0, type: 'red' },
-                { angle: 30, type: 'yellow' },
-                { angle: 60, type: 'blue' },
-                { angle: 90, type: 'split-red-white' },
-                { angle: 120, type: 'red' },
-                { angle: 150, type: 'split-blue-yellow' },
-                { angle: 180, type: 'tricolor' },
-                { angle: 210, type: 'yellow' },
-                { angle: 240, type: 'cross' },
-                { angle: 270, type: 'blue' },
-                { angle: 300, type: 'split-red-white' },
-                { angle: 330, type: 'red' }
+                { angle: 0, type: 'red' }, { angle: 30, type: 'yellow' },
+                { angle: 60, type: 'blue' }, { angle: 90, type: 'split-red-white' },
+                { angle: 120, type: 'red' }, { angle: 150, type: 'split-blue-yellow' },
+                { angle: 180, type: 'tricolor' }, { angle: 210, type: 'yellow' },
+                { angle: 240, type: 'cross' }, { angle: 270, type: 'blue' },
+                { angle: 300, type: 'split-red-white' }, { angle: 330, type: 'red' }
             ];
 
-            const flagRadius = radius + 10;
+            const flagRadius = radius + 10 * scaleFactor;
             flags.forEach(flag => {
                 const angle = flag.angle * (Math.PI / 180);
                 const x = centerX + flagRadius * Math.cos(angle - Math.PI/2);
@@ -229,10 +259,9 @@ class TideClockCard extends HTMLElement {
                 this.drawNauticalFlag(ctx, x, y, angle, flag.type);
             });
 
-            // Triangles décoratifs
             const numTriangles = 24;
-            const triangleSize = 6;
-            const triangleRadius = radius + 2.5;
+            const triangleSize = 6 * scaleFactor;
+            const triangleRadius = radius + 2.5 * scaleFactor;
             
             for (let i = 0; i < numTriangles; i++) {
                 const angle = (i * 360 / numTriangles) * (Math.PI / 180);
@@ -251,25 +280,25 @@ class TideClockCard extends HTMLElement {
                 
                 ctx.fillStyle = theme.triangleColor;
                 ctx.fill();
-                
                 ctx.restore();
             }
         }
 
-        // Cadran
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
         ctx.fillStyle = theme.dial;
         ctx.fill();
         ctx.strokeStyle = theme.dialStroke;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 * scaleFactor;
         ctx.stroke();
 
-        // Secteurs bleus pour le thème maritime
         if (this.config.theme === 'maritime') {
             ctx.beginPath();
             ctx.moveTo(centerX, centerY);
-            ctx.arc(centerX, centerY, radius - 25, Math.PI/2, 3*Math.PI/2, false);
+            ctx.arc(centerX, centerY, radius - 25 * scaleFactor, Math.PI/2, 3*Math.PI/2, false);
             ctx.closePath();
             ctx.fillStyle = theme.sectorColor;
             ctx.globalAlpha = 0.15;
@@ -278,7 +307,7 @@ class TideClockCard extends HTMLElement {
 
             ctx.beginPath();
             ctx.moveTo(centerX, centerY);
-            ctx.arc(centerX, centerY, radius - 25, -Math.PI/2, Math.PI/2, false);
+            ctx.arc(centerX, centerY, radius - 25 * scaleFactor, -Math.PI/2, Math.PI/2, false);
             ctx.closePath();
             ctx.fillStyle = theme.sectorColor;
             ctx.globalAlpha = 0.15;
@@ -288,32 +317,31 @@ class TideClockCard extends HTMLElement {
             for (let i = 1; i <= 5; i++) {
                 const angleLeft = (90 + (i * 30)) * (Math.PI / 180);
                 ctx.beginPath();
-                ctx.moveTo(centerX + (radius - 55) * Math.cos(angleLeft), 
-                          centerY + (radius - 55) * Math.sin(angleLeft));
-                ctx.lineTo(centerX + (radius - 25) * Math.cos(angleLeft), 
-                          centerY + (radius - 25) * Math.sin(angleLeft));
+                ctx.moveTo(centerX + (radius - 55 * scaleFactor) * Math.cos(angleLeft), 
+                          centerY + (radius - 55 * scaleFactor) * Math.sin(angleLeft));
+                ctx.lineTo(centerX + (radius - 25 * scaleFactor) * Math.cos(angleLeft), 
+                          centerY + (radius - 25 * scaleFactor) * Math.sin(angleLeft));
                 ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 2 * scaleFactor;
                 ctx.stroke();
 
                 const angleRight = (270 + (i * 30)) * (Math.PI / 180);
                 ctx.beginPath();
-                ctx.moveTo(centerX + (radius - 55) * Math.cos(angleRight), 
-                          centerY + (radius - 55) * Math.sin(angleRight));
-                ctx.lineTo(centerX + (radius - 25) * Math.cos(angleRight), 
-                          centerY + (radius - 25) * Math.sin(angleRight));
+                ctx.moveTo(centerX + (radius - 55 * scaleFactor) * Math.cos(angleRight), 
+                          centerY + (radius - 55 * scaleFactor) * Math.sin(angleRight));
+                ctx.lineTo(centerX + (radius - 25 * scaleFactor) * Math.cos(angleRight), 
+                          centerY + (radius - 25 * scaleFactor) * Math.sin(angleRight));
                 ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 2 * scaleFactor;
                 ctx.stroke();
             }
         }
 
-        // Chiffres
-        ctx.font = 'bold 16px sans-serif';
+        ctx.font = `bold ${size.font}px sans-serif`;
         ctx.fillStyle = theme.numbers;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const markerRadius = this.config.theme === 'maritime' ? radius - 40 : radius - 15;
+        const markerRadius = this.config.theme === 'maritime' ? radius - 40 * scaleFactor : radius - 15 * scaleFactor;
 
         const startAngleLeft = 90;
         const endAngleLeft = 270;
@@ -340,43 +368,46 @@ class TideClockCard extends HTMLElement {
             ctx.fillText(chiffre, x, y);
         }
 
-        // Texte fixe
-        ctx.font = 'bold 12px sans-serif';
+        ctx.font = `bold ${size.fontSmall}px sans-serif`;
         ctx.fillStyle = theme.textFixed;
-        ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 40);
-        ctx.fillText("MARÉE BASSE", centerX, centerY + radius - 40);
+        ctx.fillText("MARÉE HAUTE", centerX, centerY - radius + 40 * scaleFactor);
+        ctx.fillText("MARÉE BASSE", centerX, centerY + radius - 40 * scaleFactor);
         
         if (this.config.theme !== 'maritime') {
-            ctx.font = '14px sans-serif';
-            ctx.fillText("HORAIRES DES MARÉES", centerX, centerY + 10);
+            ctx.font = `${size.fontMedium}px sans-serif`;
+            ctx.fillText("HORAIRES DES MARÉES", centerX, centerY + 10 * scaleFactor);
         }
 
-        // Coefficient
         if (tideCoeff) {
-            const coeffBoxWidth = 35;
-            const coeffBoxHeight = 18;
-            const coeffBoxY = centerY - radius + 55;
+            const coeffBoxWidth = 35 * scaleFactor;
+            const coeffBoxHeight = 18 * scaleFactor;
+            const coeffBoxY = centerY - radius + 55 * scaleFactor;
             
             ctx.fillStyle = theme.timeBox;
             ctx.fillRect(centerX - coeffBoxWidth/2, coeffBoxY, coeffBoxWidth, coeffBoxHeight);
             
             ctx.fillStyle = theme.timeText;
-            ctx.font = 'bold 14px sans-serif';
+            ctx.font = `bold ${size.fontMedium}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(tideCoeff, centerX, coeffBoxY + coeffBoxHeight/2);
         }
 
-        // Texte dynamique
-        const tendanceY = this.config.theme === 'maritime' ? centerY - 10 : centerY + 30;
-        ctx.font = 'bold 14px sans-serif';
+        const tendanceY = this.config.theme === 'maritime' ? centerY - 10 * scaleFactor : centerY + 30 * scaleFactor;
+        ctx.font = `bold ${size.fontMedium}px sans-serif`;
         ctx.fillStyle = theme.textDynamic;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const tendance = isNextTideHigh ? "Montante" : "Descendante";
+        
+        if (this.config.theme === 'dark') {
+            ctx.shadowColor = 'rgba(0, 212, 255, 0.6)';
+            ctx.shadowBlur = 10 * scaleFactor;
+        }
         ctx.fillText(tendance, centerX, tendanceY);
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
 
-        // Calcul de l'angle de l'aiguille
         const hoursElapsed = elapsed / (60 * 60 * 1000);
         let needleAngle;
         
@@ -386,58 +417,65 @@ class TideClockCard extends HTMLElement {
             needleAngle = (270 + hoursElapsed * degreesPerHour) * (Math.PI / 180);
         }
 
-        // Aiguille
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.rotate(needleAngle);
         
+        if (this.config.theme === 'dark') {
+            ctx.shadowColor = theme.needleGlow;
+            ctx.shadowBlur = 20 * scaleFactor;
+        }
+        
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.lineTo(110, 0);
+        ctx.lineTo(110 * scaleFactor, 0);
         ctx.strokeStyle = theme.needle;
-        ctx.lineWidth = 6;
+        ctx.lineWidth = 6 * scaleFactor;
         ctx.lineCap = 'round';
         ctx.stroke();
         
         if (this.config.theme === 'maritime') {
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
             ctx.beginPath();
-            ctx.moveTo(-15, 0);
-            ctx.lineTo(90, 0);
+            ctx.moveTo(-15 * scaleFactor, 0);
+            ctx.lineTo(90 * scaleFactor, 0);
             ctx.strokeStyle = theme.needleSecondary || '#D4AF37';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 3 * scaleFactor;
             ctx.lineCap = 'round';
             ctx.stroke();
         }
         
         ctx.restore();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
 
-        // Centre
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 8, 0, 2 * Math.PI);
+        ctx.arc(centerX, centerY, 8 * scaleFactor, 0, 2 * Math.PI);
         ctx.fillStyle = theme.center;
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 4, 0, 2 * Math.PI);
+        ctx.arc(centerX, centerY, 4 * scaleFactor, 0, 2 * Math.PI);
         ctx.fillStyle = theme.centerInner;
         ctx.fill();
 
-        // Heures affichées
-        const boxWidth = 50, boxHeight = 20;
+        const boxWidth = 50 * scaleFactor, boxHeight = 20 * scaleFactor;
         ctx.fillStyle = theme.timeBox;
-        ctx.fillRect(centerX - boxWidth/2, centerY - radius + 5, boxWidth, boxHeight);
+        ctx.fillRect(centerX - boxWidth/2, centerY - radius + 5 * scaleFactor, boxWidth, boxHeight);
         ctx.fillStyle = theme.timeText;
-        ctx.font = 'bold 12px sans-serif';
+        ctx.font = `bold ${size.fontSmall}px sans-serif`;
         ctx.textBaseline = 'middle';
-        ctx.fillText(tideHighRaw, centerX, centerY - radius + 15);
+        ctx.fillText(tideHighRaw, centerX, centerY - radius + 15 * scaleFactor);
         
         ctx.fillStyle = theme.timeBox;
-        ctx.fillRect(centerX - boxWidth/2, centerY + radius - 25, boxWidth, boxHeight);
+        ctx.fillRect(centerX - boxWidth/2, centerY + radius - 25 * scaleFactor, boxWidth, boxHeight);
         ctx.fillStyle = theme.timeText;
-        ctx.fillText(tideLowRaw, centerX, centerY + radius - 15);
+        ctx.fillText(tideLowRaw, centerX, centerY + radius - 15 * scaleFactor);
     }
 
     getCardSize() {
-        return 5;
+        const sizes = { tiny: 3, xsmall: 3, small: 4, medium: 5, large: 7, xlarge: 9 };
+        return sizes[this.config.size] || 5;
     }
 
     static getConfigElement() {
@@ -445,26 +483,24 @@ class TideClockCard extends HTMLElement {
     }
 
     static getStubConfig() {
-        return {
-            tide_high: "",
-            tide_low: "",
-            theme: "classic"
-        };
+        return { tide_high: "", tide_low: "", theme: "classic", size: "medium" };
     }
 }
 
-// Éditeur de configuration
 class TideClockCardEditor extends HTMLElement {
     setConfig(config) {
-        this._config = config;
+        this._config = { ...config };
+        if (!this._config.size) {
+            this._config.size = 'medium';
+        }
+        if (!this._config.theme) {
+            this._config.theme = 'classic';
+        }
         this.render();
     }
 
     configChanged(newConfig) {
-        const event = new Event('config-changed', {
-            bubbles: true,
-            composed: true
-        });
+        const event = new Event('config-changed', { bubbles: true, composed: true });
         event.detail = { config: newConfig };
         this.dispatchEvent(event);
     }
@@ -478,7 +514,6 @@ class TideClockCardEditor extends HTMLElement {
         if (!this._config) return;
 
         const entities = this.getEntitiesList();
-        
         const createOptions = (selectedValue) => {
             let options = '<option value="">-- Sélectionner une entité --</option>';
             entities.forEach(entity => {
@@ -490,86 +525,72 @@ class TideClockCardEditor extends HTMLElement {
         };
 
         const currentTheme = this._config.theme || 'classic';
+        const currentSize = this._config.size || 'medium';
 
         this.innerHTML = `
             <div style="padding: 20px;">
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">
-                        Thème de l'horloge :
-                    </label>
-                    <select 
-                        id="theme_select"
-                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
-                    >
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Taille de l'horloge :</label>
+                    <select id="size_select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                        <option value="tiny" ${currentSize === 'tiny' ? 'selected' : ''}>🔬 Très petite (150x150px)</option>
+                        <option value="xsmall" ${currentSize === 'xsmall' ? 'selected' : ''}>📱 Extra petite (200x200px)</option>
+                        <option value="small" ${currentSize === 'small' ? 'selected' : ''}>📱 Petite (250x250px)</option>
+                        <option value="medium" ${currentSize === 'medium' ? 'selected' : ''}>💻 Moyenne (300x300px)</option>
+                        <option value="large" ${currentSize === 'large' ? 'selected' : ''}>🖥️ Grande (400x400px)</option>
+                        <option value="xlarge" ${currentSize === 'xlarge' ? 'selected' : ''}>📺 Très grande (500x500px)</option>
+                    </select>
+                    <small style="color: #666; display: block; margin-top: 4px;">Choisissez la taille d'affichage de votre horloge</small>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Thème de l'horloge :</label>
+                    <select id="theme_select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
                         <option value="classic" ${currentTheme === 'classic' ? 'selected' : ''}>🌊 Classic (Bleu marine)</option>
                         <option value="light" ${currentTheme === 'light' ? 'selected' : ''}>☀️ Light (Fond blanc)</option>
                         <option value="maritime" ${currentTheme === 'maritime' ? 'selected' : ''}>⚓ Maritime (Style horloge nautique avec drapeaux)</option>
+                        <option value="dark" ${currentTheme === 'dark' ? 'selected' : ''}>🌙 Dark (Noir avec effets lumineux)</option>
                     </select>
-                    <small style="color: #666; display: block; margin-top: 4px;">
-                        Choisissez le style visuel de votre horloge des marées
-                    </small>
+                    <small style="color: #666; display: block; margin-top: 4px;">Choisissez le style visuel de votre horloge des marées</small>
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">
-                        Entité marée haute :
-                    </label>
-                    <select 
-                        id="tide_high_select"
-                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 8px;"
-                    >
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Entité marée haute :</label>
+                    <select id="tide_high_select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 8px;">
                         ${createOptions(this._config.tide_high)}
                     </select>
-                    <input 
-                        type="text" 
-                        id="tide_high_input" 
-                        value="${this._config.tide_high || ''}"
-                        placeholder="sensor.maree_haute"
-                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; display: none;"
-                    />
-                    <small style="color: #666; display: block; margin-top: 4px;">
-                        L'entité doit retourner une heure au format HH:MM
-                    </small>
+                    <input type="text" id="tide_high_input" value="${this._config.tide_high || ''}" placeholder="sensor.maree_haute"
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; display: none;" />
+                    <small style="color: #666; display: block; margin-top: 4px;">L'entité doit retourner une heure au format HH:MM</small>
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">
-                        Entité marée basse :
-                    </label>
-                    <select 
-                        id="tide_low_select"
-                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 8px;"
-                    >
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Entité marée basse :</label>
+                    <select id="tide_low_select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 8px;">
                         ${createOptions(this._config.tide_low)}
                     </select>
-                    <input 
-                        type="text" 
-                        id="tide_low_input" 
-                        value="${this._config.tide_low || ''}"
-                        placeholder="sensor.maree_basse"
-                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; display: none;"
-                    />
-                    <small style="color: #666; display: block; margin-top: 4px;">
-                        L'entité doit retourner une heure au format HH:MM
-                    </small>
+                    <input type="text" id="tide_low_input" value="${this._config.tide_low || ''}" placeholder="sensor.maree_basse"
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; display: none;" />
+                    <small style="color: #666; display: block; margin-top: 4px;">L'entité doit retourner une heure au format HH:MM</small>
                 </div>
 
                 <div style="margin-top: 16px; padding: 12px; background-color: #f0f8ff; border-left: 4px solid #0066CC; border-radius: 4px;">
-                    <small style="color: #333;">
-                        ℹ️ <strong>Info :</strong> Le coefficient sera automatiquement lu depuis l'attribut <code>coeff</code> de l'entité marée haute.
-                    </small>
+                    <small style="color: #333;">ℹ️ <strong>Info :</strong> Le coefficient sera automatiquement lu depuis l'attribut <code>coeff</code> de l'entité marée haute.</small>
                 </div>
             </div>
         `;
 
-        // Gestion du thème
+        const sizeSelect = this.querySelector('#size_select');
+        sizeSelect.addEventListener('change', (e) => {
+            this._config = { ...this._config, size: e.target.value };
+            this.configChanged(this._config);
+        });
+
         const themeSelect = this.querySelector('#theme_select');
         themeSelect.addEventListener('change', (e) => {
             this._config = { ...this._config, theme: e.target.value };
             this.configChanged(this._config);
         });
 
-        // Gestion marée haute
         const tideHighSelect = this.querySelector('#tide_high_select');
         const tideHighInput = this.querySelector('#tide_high_input');
         
@@ -603,7 +624,6 @@ class TideClockCardEditor extends HTMLElement {
             }
         });
 
-        // Gestion marée basse
         const tideLowSelect = this.querySelector('#tide_low_select');
         const tideLowInput = this.querySelector('#tide_low_input');
         
