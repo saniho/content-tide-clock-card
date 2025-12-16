@@ -474,7 +474,7 @@ class TideClockCard extends HTMLElement {
     }
 
     getCardSize() {
-        const sizes = { small: 4, medium: 5, large: 7, xlarge: 9 };
+        const sizes = { tiny: 3, xsmall: 3, small: 4, medium: 5, large: 7, xlarge: 9 };
         return sizes[this.config.size] || 5;
     }
 
@@ -489,7 +489,13 @@ class TideClockCard extends HTMLElement {
 
 class TideClockCardEditor extends HTMLElement {
     setConfig(config) {
-        this._config = config;
+        this._config = { ...config };
+        if (!this._config.size) {
+            this._config.size = 'medium';
+        }
+        if (!this._config.theme) {
+            this._config.theme = 'classic';
+        }
         this.render();
     }
 
@@ -526,6 +532,8 @@ class TideClockCardEditor extends HTMLElement {
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 500;">Taille de l'horloge :</label>
                     <select id="size_select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                        <option value="tiny" ${currentSize === 'tiny' ? 'selected' : ''}>🔬 Très petite (150x150px)</option>
+                        <option value="xsmall" ${currentSize === 'xsmall' ? 'selected' : ''}>📱 Extra petite (200x200px)</option>
                         <option value="small" ${currentSize === 'small' ? 'selected' : ''}>📱 Petite (250x250px)</option>
                         <option value="medium" ${currentSize === 'medium' ? 'selected' : ''}>💻 Moyenne (300x300px)</option>
                         <option value="large" ${currentSize === 'large' ? 'selected' : ''}>🖥️ Grande (400x400px)</option>
